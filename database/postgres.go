@@ -1,3 +1,4 @@
+// Package database provides database connectivity and management for the authentication service.
 package database
 
 import (
@@ -8,12 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Postgres represents the database connection pool.
 type Postgres struct {
 	Pool *pgxpool.Pool
 }
 
-func NewPostgres(ctx context.Context, databaseUrl string) (*Postgres, error) {
-	config, err := pgxpool.ParseConfig(databaseUrl)
+// NewPostgres creates a new database connection pool.
+func NewPostgres(ctx context.Context, databaseURL string) (*Postgres, error) {
+	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database config: %w", err)
 	}

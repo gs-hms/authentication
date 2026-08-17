@@ -1,8 +1,9 @@
+// Authentication service for Hotel Management System.
 package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -12,14 +13,14 @@ import (
 
 func main() {
 	ctx := context.Background()
-	databseUrl := os.Getenv("DATABASE_URL")
-	if strings.TrimSpace(databseUrl) == "" {
-		panic("DATABASE_URL environment variable is not set")
+	databaseURL := os.Getenv("DATABASE_URL")
+	if strings.TrimSpace(databaseURL) == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
 	}
 
-	db, err := database.NewPostgres(ctx, databseUrl)
+	db, err := database.NewPostgres(ctx, databaseURL)
 	if err != nil {
-		panic(fmt.Sprintf("failed to connect to database: %v", err))
+		log.Fatalf("connect to database: %v", err)
 	}
 	defer db.Pool.Close()
 
@@ -31,5 +32,8 @@ func main() {
 		})
 	})
 
-	r.Run()
+	err = r.Run()
+	if err != nil {
+		log.Fatalf("start server: %v", err)
+	}
 }
