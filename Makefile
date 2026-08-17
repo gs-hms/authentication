@@ -17,3 +17,6 @@ check:
 	go vet ./...
 	golangci-lint run
 	go test ./...
+
+run:
+	go run ./cmd/server/main.go
