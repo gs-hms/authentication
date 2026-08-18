@@ -132,13 +132,89 @@ func (r *userRepository) List(ctx context.Context, page, pageSize int) (*model.P
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
-	// Implement the logic to retrieve a user by email from the database.
-	return nil, nil
+	qry, args, err := sq.Select(
+		"id",
+		"first_name",
+		"last_name",
+		"email",
+		"dial_code",
+		"phone",
+		"password_hash",
+		"is_active",
+		"created_at",
+		"updated_at").
+		From(model.USER_TABLE_NAME).
+		Where(sq.Eq{"email": email}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("build get user by email query : %w", err)
+	}
+
+	var user model.User
+
+	row := r.db.Pool.QueryRow(ctx, qry, args...)
+	err = row.Scan(
+		&user.ID,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.DialCode,
+		&user.Phone,
+		&user.PasswordHash,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("execute get user by email query : %w", err)
+	}
+
+	return &user, nil
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, error) {
-	// Implement the logic to retrieve a user by ID from the database.
-	return nil, nil
+	qry, args, err := sq.Select(
+		"id",
+		"first_name",
+		"last_name",
+		"email",
+		"dial_code",
+		"phone",
+		"password_hash",
+		"is_active",
+		"created_at",
+		"updated_at").
+		From(model.USER_TABLE_NAME).
+		Where(sq.Eq{"id": id}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("build get user by id query : %w", err)
+	}
+
+	var user model.User
+
+	row := r.db.Pool.QueryRow(ctx, qry, args...)
+	err = row.Scan(
+		&user.ID,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.DialCode,
+		&user.Phone,
+		&user.PasswordHash,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("execute get user by email query : %w", err)
+	}
+
+	return &user, nil
 }
 
 func (r *userRepository) UpdateUser(ctx context.Context, user *model.User) error {
