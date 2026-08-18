@@ -162,3 +162,24 @@ func TestListUsers(t *testing.T) {
 	require.Equal(t, updatedAt, users.Users[0].UpdatedAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestListUsersError(t *testing.T) {
+	repo, mock := setupRepository(t)
+
+	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM users WHERE deleted_at IS NULL`).
+		WillReturnRows(
+			pgxmock.NewRows([]string{"count"}).
+				AddRow(5),
+		)
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL ORDER BY id ASC LIMIT 10 OFFSET 0`).
+		WillReturnError(errors.New("database error"))
+
+	result, err := repo.List(context.Background(), 1, 10)
+
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.Contains(t, err.Error(), "execute list users query")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
