@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
 
@@ -180,6 +181,131 @@ func TestListUsersError(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, result)
 	require.Contains(t, err.Error(), "execute list users query")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetByEmail(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+
+	createdAt := time.Now()
+	updatedAt := time.Now()
+	email := gofakeit.Email()
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND email = \$1`).
+		WithArgs(email).
+		WillReturnRows(
+			pgxmock.NewRows([]string{
+				"id",
+				"first_name",
+				"last_name",
+				"email",
+				"dial_code",
+				"phone",
+				"password_hash",
+				"is_active",
+				"created_at",
+				"updated_at",
+			}).AddRow(
+				uint64(1),
+				gofakeit.FirstName(),
+				gofakeit.LastName(),
+				email,
+				"91",
+				gofakeit.PhoneFormatted(),
+				gofakeit.Password(true, true, true, true, true, 10),
+				gofakeit.Bool(),
+				createdAt,
+				updatedAt,
+			),
+		)
+
+	user, err := repo.GetByEmail(ctx, email)
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, email, user.Email)
+	require.Equal(t, uint64(1), user.ID)
+	require.Equal(t, createdAt, user.CreatedAt)
+	require.Equal(t, updatedAt, user.UpdatedAt)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetByEmailNotFound(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+	email := gofakeit.Email()
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND email = \$1`).
+		WithArgs(email).
+		WillReturnError(pgx.ErrNoRows)
+
+	user, err := repo.GetByEmail(ctx, email)
+	require.Error(t, err)
+	require.Nil(t, user)
+	require.ErrorContains(t, err, "no rows in result set")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetByID(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+
+	createdAt := time.Now()
+	updatedAt := time.Now()
+	id := uint64(1)
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND id = \$1`).
+		WithArgs(id).
+		WillReturnRows(
+			pgxmock.NewRows([]string{
+				"id",
+				"first_name",
+				"last_name",
+				"email",
+				"dial_code",
+				"phone",
+				"password_hash",
+				"is_active",
+				"created_at",
+				"updated_at",
+			}).AddRow(
+				id,
+				gofakeit.FirstName(),
+				gofakeit.LastName(),
+				gofakeit.Email(),
+				"91",
+				gofakeit.PhoneFormatted(),
+				gofakeit.Password(true, true, true, true, true, 10),
+				gofakeit.Bool(),
+				createdAt,
+				updatedAt,
+			),
+		)
+
+	user, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, id, user.ID)
+	require.Equal(t, createdAt, user.CreatedAt)
+	require.Equal(t, updatedAt, user.UpdatedAt)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetByIDNotFound(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+	id := uint64(1)
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND id = \$1`).
+		WithArgs(id).
+		WillReturnError(pgx.ErrNoRows)
+
+	user, err := repo.GetByID(ctx, id)
+	require.Error(t, err)
+	require.Nil(t, user)
+	require.ErrorContains(t, err, "no rows in result set")
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }

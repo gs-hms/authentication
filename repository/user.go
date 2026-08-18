@@ -145,7 +145,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 		"created_at",
 		"updated_at").
 		From(model.USER_TABLE_NAME).
-		Where(sq.Eq{"email": email}).
+		Where(sq.Eq{"email": email, "deleted_at": nil}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 
@@ -188,7 +188,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, e
 		"created_at",
 		"updated_at").
 		From(model.USER_TABLE_NAME).
-		Where(sq.Eq{"id": id}).
+		Where(sq.Eq{"deleted_at": nil, "id": id}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 
