@@ -14,7 +14,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *model.User) error
 
 	// List retrieves all users from the database.
-	List(ctx context.Context) ([]*model.User, error)
+	List(ctx context.Context, page, pageSize int) (*model.PaginatedUsers, error)
 
 	// GetByEmail retrieves a user by their email address.
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
@@ -46,21 +46,89 @@ func (r *userRepository) CreateUser(ctx context.Context, user *model.User) error
 		Columns("first_name", "last_name", "email", "dial_code", "phone", "password_hash", "is_active").
 		Values(user.FirstName, user.LastName, user.Email, user.DialCode, user.Phone, user.PasswordHash, user.IsActive).
 		PlaceholderFormat(sq.Dollar).ToSql()
-	
+
 	if err != nil {
 		return fmt.Errorf("build create user query : %w", err)
 	}
 
 	err = r.db.Pool.QueryRow(ctx, query, args...).Scan(&user.ID, &user.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("execute create user query : %w", err)	
+		return fmt.Errorf("execute create user query : %w", err)
 	}
 	return nil
 }
 
-func (r *userRepository) List(ctx context.Context) ([]*model.User, error) {
-	// Implement the logic to list all users from the database.
-	return nil, nil
+func (r *userRepository) List(ctx context.Context, page, pageSize int) (*model.PaginatedUsers, error) {
+	// Get Total Count of Users
+	countQuery, countArgs, err := sq.Select("COUNT(*)").
+		From(model.USER_TABLE_NAME).
+		Where(sq.Eq{"deleted_at": nil}). // Exclude soft-deleted users
+		PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build count users query : %w", err)
+	}
+
+	var totalCount int
+	err = r.db.Pool.QueryRow(ctx, countQuery, countArgs...).Scan(&totalCount)
+	if err != nil {
+		return nil, fmt.Errorf("execute count users query : %w", err)
+	}
+
+	offset := (page - 1) * pageSize
+	query, args, err := sq.Select(
+		"id",
+		"first_name",
+		"last_name",
+		"email",
+		"dial_code",
+		"phone",
+		"is_active",
+		"created_at",
+		"updated_at").
+		From(model.USER_TABLE_NAME).
+		Where(sq.Eq{"deleted_at": nil}). // Exclude soft-deleted users
+		OrderBy("id ASC").
+		Limit(uint64(pageSize)).
+		Offset(uint64(offset)).
+		PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build list users query : %w", err)
+	}
+
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("execute list users query : %w", err)
+	}
+	defer rows.Close()
+
+	var paginatedUsers = &model.PaginatedUsers{
+		Users:      []*model.User{},
+		TotalCount: totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+	}
+
+	for rows.Next() {
+		var user model.User
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.DialCode,
+			&user.Phone,
+			&user.IsActive,
+			&user.CreatedAt,
+			&user.UpdatedAt)
+
+		if err != nil {
+			return nil, fmt.Errorf("scan user row : %w", err)
+		}
+
+		paginatedUsers.Users = append(paginatedUsers.Users, &user)
+	}
+
+	return paginatedUsers, nil
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {

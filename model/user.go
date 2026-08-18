@@ -8,7 +8,6 @@ const (
 	USER_TABLE_NAME = "users"
 )
 
-
 type User struct {
 	ID           uint64       `json:"id" `
 	FirstName    string       `json:"first_name"`
@@ -20,4 +19,11 @@ type User struct {
 	IsActive     bool         `json:"is_active"`
 	CreatedAt    string       `json:"created_at"`
 	UpdatedAt    string       `json:"updated_at"`
+}
+
+type PaginatedUsers struct {
+	Users      []*User `json:"users"`
+	TotalCount int     `json:"total_count"`
+	Page       int     `json:"page"`
+	PageSize   int     `json:"page_size"`
 }
