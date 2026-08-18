@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type UserDialCode string
 
 const (
@@ -17,8 +19,8 @@ type User struct {
 	Phone        string       `json:"phone"`
 	PasswordHash string       `json:"-"`
 	IsActive     bool         `json:"is_active"`
-	CreatedAt    string       `json:"created_at"`
-	UpdatedAt    string       `json:"updated_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
 }
 
 type PaginatedUsers struct {
