@@ -45,6 +45,7 @@ func (r *userRepository) CreateUser(ctx context.Context, user *model.User) error
 	query, args, err := sq.Insert(model.USER_TABLE_NAME).
 		Columns("first_name", "last_name", "email", "dial_code", "phone", "password_hash", "is_active").
 		Values(user.FirstName, user.LastName, user.Email, user.DialCode, user.Phone, user.PasswordHash, user.IsActive).
+		Suffix("RETURNING id, created_at").
 		PlaceholderFormat(sq.Dollar).ToSql()
 
 	if err != nil {
@@ -241,7 +242,7 @@ func (r *userRepository) UpdateById(ctx context.Context, id uint64, user *model.
 		userUpdateQry = userUpdateQry.Set("is_active", user.IsActive)
 	}
 
-	userUpdateQry = userUpdateQry.Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar)
+	userUpdateQry = userUpdateQry.Where(sq.Eq{"id": id}).Suffix("RETURNING updated_at").PlaceholderFormat(sq.Dollar)
 	qry, args, err := userUpdateQry.ToSql()
 	if err != nil {
 		return fmt.Errorf("build update user query : %w", err)
