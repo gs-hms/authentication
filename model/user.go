@@ -1,15 +1,20 @@
+// Package model provides the data models for the authentication service.
 package model
 
 import "time"
 
+// UserDialCode represents the dial code for a user.
 type UserDialCode string
 
 const (
-	INDIA_DIAL_CODE UserDialCode = "91"
+	// IndiaDialCode represents the dial code for India.
+	IndiaDialCode UserDialCode = "91"
 
-	USER_TABLE_NAME = "users"
+	// UserTableName represents the name of the users table.
+	UserTableName = "users"
 )
 
+// User represents a user in the authentication service.
 type User struct {
 	ID           uint64       `json:"id" `
 	FirstName    string       `json:"first_name"`
@@ -23,9 +28,10 @@ type User struct {
 	UpdatedAt    time.Time    `json:"updated_at"`
 }
 
+// PaginatedUsers represents a paginated list of users.
 type PaginatedUsers struct {
 	Users      []*User `json:"users"`
-	TotalCount int     `json:"total_count"`
-	Page       int     `json:"page"`
-	PageSize   int     `json:"page_size"`
+	TotalCount uint64  `json:"total_count"`
+	Page       uint64  `json:"page"`
+	PageSize   uint64  `json:"page_size"`
 }

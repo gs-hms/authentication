@@ -156,7 +156,7 @@ func TestListUsers(t *testing.T) {
 	users, err := repo.List(ctx, 1, 2)
 	require.NoError(t, err)
 	require.NotNil(t, users)
-	require.Equal(t, 5, users.TotalCount)
+	require.Equal(t, uint64(5), users.TotalCount)
 	require.Equal(t, 2, len(users.Users))
 	require.Equal(t, uint64(1), users.Users[0].ID)
 	require.Equal(t, createdAt, users.Users[0].CreatedAt)

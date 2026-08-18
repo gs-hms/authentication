@@ -1,3 +1,4 @@
+// Package repository provides the implementation of the UserRepository interface.
 package repository
 
 import (
@@ -9,12 +10,13 @@ import (
 	"github.com/supermarios-hotel-management-system/authentication/model"
 )
 
+// UserRepository defines the interface for user repository.
 type UserRepository interface {
 	// CreateUser creates a new user in the database.
 	CreateUser(ctx context.Context, user *model.User) error
 
 	// List retrieves all users from the database.
-	List(ctx context.Context, page, pageSize int) (*model.PaginatedUsers, error)
+	List(ctx context.Context, page, pageSize uint64) (*model.PaginatedUsers, error)
 
 	// GetByEmail retrieves a user by their email address.
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
@@ -23,7 +25,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uint64) (*model.User, error)
 
 	// UpdateById updates an existing user's information in the database.
-	UpdateById(ctx context.Context, id uint64, user *model.User) error
+	UpdateByID(ctx context.Context, id uint64, user *model.User) error
 
 	// DeleteUser removes a user from the database by their ID.
 	DeleteByID(ctx context.Context, id uint64) error
@@ -33,16 +35,16 @@ type userRepository struct {
 	db *database.Postgres
 }
 
+// NewUserRepository creates a new instance of UserRepository.
 func NewUserRepository(db *database.Postgres) UserRepository {
-	// Return an implementation of UserRepository, e.g., a struct that interacts with the database.
-	// This is a placeholder; you would replace it with your actual implementation.
 	return &userRepository{
 		db: db,
 	}
 }
 
+// CreateUser creates a new user in the database.
 func (r *userRepository) CreateUser(ctx context.Context, user *model.User) error {
-	query, args, err := sq.Insert(model.USER_TABLE_NAME).
+	query, args, err := sq.Insert(model.UserTableName).
 		Columns("first_name", "last_name", "email", "dial_code", "phone", "password_hash", "is_active").
 		Values(user.FirstName, user.LastName, user.Email, user.DialCode, user.Phone, user.PasswordHash, user.IsActive).
 		Suffix("RETURNING id, created_at").
@@ -59,37 +61,28 @@ func (r *userRepository) CreateUser(ctx context.Context, user *model.User) error
 	return nil
 }
 
-func (r *userRepository) List(ctx context.Context, page, pageSize int) (*model.PaginatedUsers, error) {
+func (r *userRepository) List(ctx context.Context, page, pageSize uint64) (*model.PaginatedUsers, error) {
 	// Get Total Count of Users
 	countQuery, countArgs, err := sq.Select("COUNT(*)").
-		From(model.USER_TABLE_NAME).
+		From(model.UserTableName).
 		Where(sq.Eq{"deleted_at": nil}). // Exclude soft-deleted users
 		PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("build count users query : %w", err)
 	}
 
-	var totalCount int
+	var totalCount uint64
 	err = r.db.Pool.QueryRow(ctx, countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
 		return nil, fmt.Errorf("execute count users query : %w", err)
 	}
 
 	offset := (page - 1) * pageSize
-	query, args, err := sq.Select(
-		"id",
-		"first_name",
-		"last_name",
-		"email",
-		"dial_code",
-		"phone",
-		"is_active",
-		"created_at",
-		"updated_at").
-		From(model.USER_TABLE_NAME).
+	query, args, err := sq.Select("id", "first_name", "last_name", "email", "dial_code", "phone", "is_active", "created_at", "updated_at").
+		From(model.UserTableName).
 		Where(sq.Eq{"deleted_at": nil}). // Exclude soft-deleted users
 		OrderBy("id ASC").
-		Limit(uint64(pageSize)).
+		Limit(pageSize).
 		Offset(uint64(offset)).
 		PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
@@ -111,13 +104,7 @@ func (r *userRepository) List(ctx context.Context, page, pageSize int) (*model.P
 
 	for rows.Next() {
 		var user model.User
-		err := rows.Scan(
-			&user.ID,
-			&user.FirstName,
-			&user.LastName,
-			&user.Email,
-			&user.DialCode,
-			&user.Phone,
+		err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DialCode, &user.Phone,
 			&user.IsActive,
 			&user.CreatedAt,
 			&user.UpdatedAt)
@@ -144,7 +131,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 		"is_active",
 		"created_at",
 		"updated_at").
-		From(model.USER_TABLE_NAME).
+		From(model.UserTableName).
 		Where(sq.Eq{"email": email, "deleted_at": nil}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
@@ -187,7 +174,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, e
 		"is_active",
 		"created_at",
 		"updated_at").
-		From(model.USER_TABLE_NAME).
+		From(model.UserTableName).
 		Where(sq.Eq{"deleted_at": nil, "id": id}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
@@ -218,8 +205,8 @@ func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, e
 	return &user, nil
 }
 
-func (r *userRepository) UpdateById(ctx context.Context, id uint64, user *model.User) error {
-	userUpdateQry := sq.Update(model.USER_TABLE_NAME)
+func (r *userRepository) UpdateByID(ctx context.Context, id uint64, user *model.User) error {
+	userUpdateQry := sq.Update(model.UserTableName)
 	if user.FirstName != "" {
 		userUpdateQry = userUpdateQry.Set("first_name", user.FirstName)
 	}
@@ -238,7 +225,7 @@ func (r *userRepository) UpdateById(ctx context.Context, id uint64, user *model.
 	if user.PasswordHash != "" {
 		userUpdateQry = userUpdateQry.Set("password_hash", user.PasswordHash)
 	}
-	if user.IsActive != false {
+	if user.IsActive {
 		userUpdateQry = userUpdateQry.Set("is_active", user.IsActive)
 	}
 
@@ -256,7 +243,7 @@ func (r *userRepository) UpdateById(ctx context.Context, id uint64, user *model.
 }
 
 func (r *userRepository) DeleteByID(ctx context.Context, id uint64) error {
-	qry, args, err := sq.Delete(model.USER_TABLE_NAME).Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar).ToSql()
+	qry, args, err := sq.Delete(model.UserTableName).Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fmt.Errorf("build delete user query : %w", err)
 	}

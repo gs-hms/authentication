@@ -13,3 +13,8 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - gosec
+    - funlen
+
+linters-settings:
+  funlen:
+    lines: 50
