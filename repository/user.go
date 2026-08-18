@@ -22,11 +22,11 @@ type UserRepository interface {
 	// GetByID retrieves a user by their ID.
 	GetByID(ctx context.Context, id uint64) (*model.User, error)
 
-	// UpdateUser updates an existing user's information in the database.
-	UpdateUser(ctx context.Context, user *model.User) error
+	// UpdateById updates an existing user's information in the database.
+	UpdateById(ctx context.Context, id uint64, user *model.User) error
 
 	// DeleteUser removes a user from the database by their ID.
-	DeleteUser(ctx context.Context, id uint64) error
+	DeleteByID(ctx context.Context, id uint64) error
 }
 
 type userRepository struct {
@@ -217,12 +217,52 @@ func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, e
 	return &user, nil
 }
 
-func (r *userRepository) UpdateUser(ctx context.Context, user *model.User) error {
-	// Implement the logic to update a user in the database.
+func (r *userRepository) UpdateById(ctx context.Context, id uint64, user *model.User) error {
+	userUpdateQry := sq.Update(model.USER_TABLE_NAME)
+	if user.FirstName != "" {
+		userUpdateQry = userUpdateQry.Set("first_name", user.FirstName)
+	}
+	if user.LastName != "" {
+		userUpdateQry = userUpdateQry.Set("last_name", user.LastName)
+	}
+	if user.Email != "" {
+		userUpdateQry = userUpdateQry.Set("email", user.Email)
+	}
+	if user.DialCode != "" {
+		userUpdateQry = userUpdateQry.Set("dial_code", user.DialCode)
+	}
+	if user.Phone != "" {
+		userUpdateQry = userUpdateQry.Set("phone", user.Phone)
+	}
+	if user.PasswordHash != "" {
+		userUpdateQry = userUpdateQry.Set("password_hash", user.PasswordHash)
+	}
+	if user.IsActive != false {
+		userUpdateQry = userUpdateQry.Set("is_active", user.IsActive)
+	}
+
+	userUpdateQry = userUpdateQry.Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar)
+	qry, args, err := userUpdateQry.ToSql()
+	if err != nil {
+		return fmt.Errorf("build update user query : %w", err)
+	}
+
+	err = r.db.Pool.QueryRow(ctx, qry, args...).Scan(&user.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("execute update user query : %w", err)
+	}
 	return nil
 }
 
-func (r *userRepository) DeleteUser(ctx context.Context, id uint64) error {
-	// Implement the logic to delete a user from the database.
+func (r *userRepository) DeleteByID(ctx context.Context, id uint64) error {
+	qry, args, err := sq.Delete(model.USER_TABLE_NAME).Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return fmt.Errorf("build delete user query : %w", err)
+	}
+
+	err = r.db.Pool.QueryRow(ctx, qry, args...).Scan()
+	if err != nil {
+		return fmt.Errorf("execute delete user query : %w", err)
+	}
 	return nil
 }
