@@ -14,6 +14,7 @@ import (
 
 // UserService defines the interface for user service.
 type UserService interface {
+	// Signup creates a new user.
 	Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error)
 }
 
@@ -31,6 +32,10 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error) {
 	if _, err := mail.ParseAddress(req.Email); err != nil {
 		return nil, ErrInvalidEmail
+	}
+
+	if !ValidatePhone(req.DialCode, req.Phone) {
+		return nil, ErrInvalidPhone
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -55,6 +60,16 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 
 	if existingUser != nil {
 		return nil, ErrUserWithEmailExists
+	}
+
+	// Check if user with the same phone number exists
+	existingUser, err = s.userRepo.GetByPhone(ctx, req.DialCode, req.Phone)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingUser != nil {
+		return nil, ErrUserWithPhoneExists
 	}
 
 	if err := s.userRepo.CreateUser(ctx, &user); err != nil {
