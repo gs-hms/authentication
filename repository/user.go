@@ -162,6 +162,28 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	return &user, nil
 }
 
+func (r *userRepository) GetByPhone(ctx context.Context, dialCode model.UserDialCode, phone string) (*model.User, error) {
+	qry, args, err := sq.Select("id", "first_name", "last_name", "email", "dial_code", "phone", "password_hash", "is_active", "created_at", "updated_at").
+		From(model.UserTableName).
+		Where(sq.Eq{"dial_code": dialCode, "phone": phone, "deleted_at": nil}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("build get user by phone query : %w", err)
+	}
+
+	var user model.User
+
+	err = r.db.Pool.QueryRow(ctx, qry, args...).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DialCode, &user.Phone, &user.PasswordHash, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("execute get user by phone query : %w", err)
+	}
+
+	return &user, nil
+}
+
 func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, error) {
 	qry, args, err := sq.Select(
 		"id",
