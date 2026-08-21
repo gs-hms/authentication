@@ -248,6 +248,71 @@ func TestGetByEmailNotFound(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestGetByPhone(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+
+	createdAt := time.Now()
+	updatedAt := time.Now()
+	dialCode := model.UserDialCode("91")
+	phone := gofakeit.PhoneFormatted()
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND dial_code = \$1 AND phone = \$2`).
+		WithArgs(dialCode, phone).
+		WillReturnRows(
+			pgxmock.NewRows([]string{
+				"id",
+				"first_name",
+				"last_name",
+				"email",
+				"dial_code",
+				"phone",
+				"password_hash",
+				"is_active",
+				"created_at",
+				"updated_at",
+			}).AddRow(
+				uint64(1),
+				gofakeit.FirstName(),
+				gofakeit.LastName(),
+				gofakeit.Email(),
+				dialCode,
+				phone,
+				gofakeit.Password(true, true, true, true, true, 10),
+				gofakeit.Bool(),
+				createdAt,
+				updatedAt,
+			),
+		)
+
+	user, err := repo.GetByPhone(ctx, dialCode, phone)
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	require.Equal(t, dialCode, user.DialCode)
+	require.Equal(t, phone, user.Phone)
+	require.Equal(t, uint64(1), user.ID)
+	require.Equal(t, createdAt, user.CreatedAt)
+	require.Equal(t, updatedAt, user.UpdatedAt)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetByPhoneNotFound(t *testing.T) {
+	repo, mock := setupRepository(t)
+	ctx := context.Background()
+	dialCode := model.UserDialCode("91")
+	phone := gofakeit.PhoneFormatted()
+
+	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND dial_code = \$1 AND phone = \$2`).
+		WithArgs(dialCode, phone).
+		WillReturnError(pgx.ErrNoRows)
+
+	user, err := repo.GetByPhone(ctx, dialCode, phone)
+	require.Error(t, err)
+	require.Nil(t, user)
+	require.ErrorContains(t, err, "no rows in result set")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestGetByID(t *testing.T) {
 	repo, mock := setupRepository(t)
 	ctx := context.Background()

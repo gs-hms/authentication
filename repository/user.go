@@ -21,6 +21,9 @@ type UserRepository interface {
 	// GetByEmail retrieves a user by their email address.
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
 
+	// GetByPhone retrieves a user by their phone number.
+	GetByPhone(ctx context.Context, dialCode model.UserDialCode, phone string) (*model.User, error)
+
 	// GetByID retrieves a user by their ID.
 	GetByID(ctx context.Context, id uint64) (*model.User, error)
 

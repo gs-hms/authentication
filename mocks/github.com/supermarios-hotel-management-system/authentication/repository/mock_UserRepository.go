@@ -234,6 +234,66 @@ func (_c *MockUserRepository_GetByID_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// GetByPhone provides a mock function with given fields: ctx, dialCode, phone
+func (_m *MockUserRepository) GetByPhone(ctx context.Context, dialCode model.UserDialCode, phone string) (*model.User, error) {
+	ret := _m.Called(ctx, dialCode, phone)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByPhone")
+	}
+
+	var r0 *model.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, model.UserDialCode, string) (*model.User, error)); ok {
+		return rf(ctx, dialCode, phone)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, model.UserDialCode, string) *model.User); ok {
+		r0 = rf(ctx, dialCode, phone)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, model.UserDialCode, string) error); ok {
+		r1 = rf(ctx, dialCode, phone)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserRepository_GetByPhone_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByPhone'
+type MockUserRepository_GetByPhone_Call struct {
+	*mock.Call
+}
+
+// GetByPhone is a helper method to define mock.On call
+//   - ctx context.Context
+//   - dialCode model.UserDialCode
+//   - phone string
+func (_e *MockUserRepository_Expecter) GetByPhone(ctx interface{}, dialCode interface{}, phone interface{}) *MockUserRepository_GetByPhone_Call {
+	return &MockUserRepository_GetByPhone_Call{Call: _e.mock.On("GetByPhone", ctx, dialCode, phone)}
+}
+
+func (_c *MockUserRepository_GetByPhone_Call) Run(run func(ctx context.Context, dialCode model.UserDialCode, phone string)) *MockUserRepository_GetByPhone_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(model.UserDialCode), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_GetByPhone_Call) Return(_a0 *model.User, _a1 error) *MockUserRepository_GetByPhone_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserRepository_GetByPhone_Call) RunAndReturn(run func(context.Context, model.UserDialCode, string) (*model.User, error)) *MockUserRepository_GetByPhone_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx, page, pageSize
 func (_m *MockUserRepository) List(ctx context.Context, page uint64, pageSize uint64) (*model.PaginatedUsers, error) {
 	ret := _m.Called(ctx, page, pageSize)
