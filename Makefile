@@ -11,6 +11,7 @@ lint:
 
 test:
 	go test ./repository/...
+	go test ./service/...
 
 check:
 	gofmt -l .

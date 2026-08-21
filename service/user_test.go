@@ -32,8 +32,8 @@ func TestSignUp(t *testing.T) {
 				Password:  gofakeit.Password(true, true, true, true, true, 10),
 			},
 			setupMock: func(repo *mocks.MockUserRepository) {
-				repo.On("GetByEmail", "jondoe@example.com").Return(nil, nil)
-				repo.On("Create", mock.AnythingOfType("*model.User")).Return(nil)
+				repo.On("GetByEmail", context.Background(), "jondoe@example.com").Return(nil, nil)
+				repo.On("CreateUser", context.Background(), mock.AnythingOfType("*model.User")).Return(nil)
 			},
 			expectedErr: nil,
 		},
@@ -53,8 +53,10 @@ func TestSignUp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := new(mocks.MockUserRepository)
-			tt.setupMock(repo)
+			repo := mocks.NewMockUserRepository(t)
+			if tt.setupMock != nil {
+				tt.setupMock(repo)
+			}
 			svc := service.NewUserService(repo)
 
 			_, err := svc.Signup(context.Background(), tt.user)

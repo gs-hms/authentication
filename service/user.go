@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/mail"
 
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	"github.com/supermarios-hotel-management-system/authentication/model"
@@ -28,6 +29,10 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 }
 
 func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error) {
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		return nil, ErrInvalidEmail
+	}
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
