@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	mocks "github.com/supermarios-hotel-management-system/authentication/mocks/github.com/supermarios-hotel-management-system/authentication/repository"
+	"github.com/supermarios-hotel-management-system/authentication/model"
 	"github.com/supermarios-hotel-management-system/authentication/service"
 )
 
@@ -48,6 +49,26 @@ func TestSignUp(t *testing.T) {
 				Password:  gofakeit.Password(true, true, true, true, true, 10),
 			},
 			expectedErr: service.ErrInvalidEmail,
+		},
+		{
+			name: "existing email",
+			user: &dto.SignupRequest{
+				FirstName: gofakeit.FirstName(),
+				LastName:  gofakeit.LastName(),
+				Email:     "jondoe@mailinator.com",
+				DialCode:  "91",
+				Phone:     gofakeit.Phone(),
+				Password:  gofakeit.Password(true, true, true, true, true, 10),
+			},
+			setupMock: func(repo *mocks.MockUserRepository) {
+				repo.On("GetByEmail", mock.Anything, "jondoe@mailinator.com").Return(&model.User{
+					FirstName: "John",
+					LastName:  "Doe",
+					Email:     "jondoe@mailinator.com",
+					Phone:     "1234567890",
+				}, nil)
+			},
+			expectedErr: service.ErrUserWithEmailExists,
 		},
 	}
 
