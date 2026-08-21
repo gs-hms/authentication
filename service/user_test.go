@@ -13,66 +13,66 @@ import (
 	"github.com/supermarios-hotel-management-system/authentication/service"
 )
 
-func TestSignUp(t *testing.T) {
-	type test struct {
-		name        string
-		user        *dto.SignupRequest
-		setupMock   func(repo *mocks.MockUserRepository)
-		expectedErr error
-	}
+type test struct {
+	name        string
+	user        *dto.SignupRequest
+	setupMock   func(repo *mocks.MockUserRepository)
+	expectedErr error
+}
 
-	tests := []test{
-		{
-			name: "successful signup",
-			user: &dto.SignupRequest{
-				FirstName: gofakeit.FirstName(),
-				LastName:  gofakeit.LastName(),
-				Email:     "jondoe@example.com",
-				DialCode:  "91",
-				Phone:     gofakeit.Phone(),
-				Password:  gofakeit.Password(true, true, true, true, true, 10),
-			},
-			setupMock: func(repo *mocks.MockUserRepository) {
-				repo.On("GetByEmail", context.Background(), "jondoe@example.com").Return(nil, nil)
-				repo.On("CreateUser", context.Background(), mock.AnythingOfType("*model.User")).Return(nil)
-			},
-			expectedErr: nil,
+var signupTests = []test{
+	{
+		name: "successful signup",
+		user: &dto.SignupRequest{
+			FirstName: gofakeit.FirstName(),
+			LastName:  gofakeit.LastName(),
+			Email:     "jondoe@example.com",
+			DialCode:  "91",
+			Phone:     gofakeit.Phone(),
+			Password:  gofakeit.Password(true, true, true, true, true, 10),
 		},
-		{
-			name: "invalid email",
-			user: &dto.SignupRequest{
-				FirstName: gofakeit.FirstName(),
-				LastName:  gofakeit.LastName(),
-				Email:     "invalid-email",
-				DialCode:  "91",
-				Phone:     gofakeit.Phone(),
-				Password:  gofakeit.Password(true, true, true, true, true, 10),
-			},
-			expectedErr: service.ErrInvalidEmail,
+		setupMock: func(repo *mocks.MockUserRepository) {
+			repo.On("GetByEmail", context.Background(), "jondoe@example.com").Return(nil, nil)
+			repo.On("CreateUser", context.Background(), mock.AnythingOfType("*model.User")).Return(nil)
 		},
-		{
-			name: "existing email",
-			user: &dto.SignupRequest{
-				FirstName: gofakeit.FirstName(),
-				LastName:  gofakeit.LastName(),
+		expectedErr: nil,
+	},
+	{
+		name: "invalid email",
+		user: &dto.SignupRequest{
+			FirstName: gofakeit.FirstName(),
+			LastName:  gofakeit.LastName(),
+			Email:     "invalid-email",
+			DialCode:  "91",
+			Phone:     gofakeit.Phone(),
+			Password:  gofakeit.Password(true, true, true, true, true, 10),
+		},
+		expectedErr: service.ErrInvalidEmail,
+	},
+	{
+		name: "existing email",
+		user: &dto.SignupRequest{
+			FirstName: gofakeit.FirstName(),
+			LastName:  gofakeit.LastName(),
+			Email:     "jondoe@mailinator.com",
+			DialCode:  "91",
+			Phone:     gofakeit.Phone(),
+			Password:  gofakeit.Password(true, true, true, true, true, 10),
+		},
+		setupMock: func(repo *mocks.MockUserRepository) {
+			repo.On("GetByEmail", mock.Anything, "jondoe@mailinator.com").Return(&model.User{
+				FirstName: "John",
+				LastName:  "Doe",
 				Email:     "jondoe@mailinator.com",
-				DialCode:  "91",
-				Phone:     gofakeit.Phone(),
-				Password:  gofakeit.Password(true, true, true, true, true, 10),
-			},
-			setupMock: func(repo *mocks.MockUserRepository) {
-				repo.On("GetByEmail", mock.Anything, "jondoe@mailinator.com").Return(&model.User{
-					FirstName: "John",
-					LastName:  "Doe",
-					Email:     "jondoe@mailinator.com",
-					Phone:     "1234567890",
-				}, nil)
-			},
-			expectedErr: service.ErrUserWithEmailExists,
+				Phone:     "1234567890",
+			}, nil)
 		},
-	}
+		expectedErr: service.ErrUserWithEmailExists,
+	},
+}
 
-	for _, tt := range tests {
+func TestSignUp(t *testing.T) {
+	for _, tt := range signupTests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := mocks.NewMockUserRepository(t)
 			if tt.setupMock != nil {
