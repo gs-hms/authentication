@@ -14,14 +14,14 @@ import (
 	"github.com/supermarios-hotel-management-system/authentication/service"
 )
 
-func newSignupRequest(email string) *dto.SignupRequest {
+func newSignupRequest(email string, dialCode model.UserDialCode, phone string, password string) *dto.SignupRequest {
 	return &dto.SignupRequest{
 		FirstName: gofakeit.FirstName(),
 		LastName:  gofakeit.LastName(),
 		Email:     email,
-		DialCode:  "91",
-		Phone:     "9876543210",
-		Password:  gofakeit.Password(true, true, true, true, true, 10),
+		DialCode:  dialCode,
+		Phone:     phone,
+		Password:  password,
 	}
 }
 
@@ -36,7 +36,7 @@ func TestSignUp(t *testing.T) {
 	tests := []signupTestCase{
 		{
 			name:    "successful signup",
-			request: newSignupRequest("jondoe@example.com"),
+			request: newSignupRequest("jondoe@example.com", model.IndiaDialCode, "9876543210", "password"),
 
 			setupMock: func(repo *mocks.MockUserRepository) {
 				repo.On(
@@ -48,7 +48,7 @@ func TestSignUp(t *testing.T) {
 				repo.On(
 					"GetByPhone",
 					context.Background(),
-					model.UserDialCode("91"),
+					model.IndiaDialCode,
 					"9876543210",
 				).Return(nil, nil)
 
@@ -63,12 +63,12 @@ func TestSignUp(t *testing.T) {
 		},
 		{
 			name:        "invalid email",
-			request:     newSignupRequest("invalid-email"),
+			request:     newSignupRequest("invalid-email", "91", "9876543210", "password"),
 			expectedErr: service.ErrInvalidEmail,
 		},
 		{
 			name:    "existing email",
-			request: newSignupRequest("jondoe@mailinator.com"),
+			request: newSignupRequest("jondoe@mailinator.com", "91", "9876543210", "password"),
 
 			setupMock: func(repo *mocks.MockUserRepository) {
 				repo.On(
@@ -86,17 +86,13 @@ func TestSignUp(t *testing.T) {
 			expectedErr: service.ErrUserWithEmailExists,
 		},
 		{
-			name: "invalid phone",
-			request: func() *dto.SignupRequest {
-				req := newSignupRequest("jondoe3@example.com")
-				req.Phone = "123" // Invalid length
-				return req
-			}(),
+			name:        "invalid phone",
+			request:     newSignupRequest("jondoe3@example.com", "91", "123", "password"),
 			expectedErr: service.ErrInvalidPhone,
 		},
 		{
 			name:    "existing phone",
-			request: newSignupRequest("jondoe4@example.com"),
+			request: newSignupRequest("jondoe4@example.com", "91", "9876543210", "password"),
 			setupMock: func(repo *mocks.MockUserRepository) {
 				repo.On(
 					"GetByEmail",
@@ -117,6 +113,11 @@ func TestSignUp(t *testing.T) {
 				}, nil)
 			},
 			expectedErr: service.ErrUserWithPhoneExists,
+		},
+		{
+			name:        "invalid phone number length",
+			request:     newSignupRequest("jondoe5@example.com", "91", "123", "password"),
+			expectedErr: service.ErrInvalidPhone,
 		},
 	}
 
