@@ -22,6 +22,7 @@ import (
 type UserService interface {
 	// Signup creates a new user.
 	Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error)
+	Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error)
 }
 
 type userService struct {
