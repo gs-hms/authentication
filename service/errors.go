@@ -20,4 +20,7 @@ var (
 
 	// ErrUserNotFound is returned when the user is not found.
 	ErrUserNotFound = errors.New("user not found")
+
+	// ErrInactiveUser is returned when the user is not active.
+	ErrInactiveUser = errors.New("inactive user")
 )

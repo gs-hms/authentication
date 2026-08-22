@@ -32,6 +32,14 @@ type signupTestCase struct {
 	expectedErr error
 }
 
+type loginTestCase struct {
+	name         string
+	request      *dto.LoginRequest
+	setupMock    func(repo *mocks.MockUserRepository)
+	expectedErr  error
+	expectedResp *dto.LoginResponse
+}
+
 func TestSignUp(t *testing.T) {
 	tests := []signupTestCase{
 		{
@@ -138,5 +146,57 @@ func TestSignUp(t *testing.T) {
 			userRepo.AssertExpectations(t)
 			authSessionRepo.AssertExpectations(t)
 		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	tests := []loginTestCase{
+		{
+			name: "successful login",
+			request: &dto.LoginRequest{
+				Email:    "jondoe@example.com",
+				Password: "password",
+			},
+			setupMock: func(repo *mocks.MockUserRepository) {
+				repo.On(
+					"GetByEmail",
+					mock.Anything,
+					"jondoe@example.com",
+				).Return(&model.User{
+					ID:        1,
+					FirstName: "John",
+					LastName:  "Doe",
+					Email:     "jondoe@example.com",
+					Phone:     "1234567890",
+					PasswordHash:  "hashed-password",
+				}, nil)
+			},
+			expectedErr: nil,
+			expectedResp: &dto.LoginResponse{
+				AccessToken:  "access-token",
+				RefreshToken: "refresh-token",
+				UserID:       1,
+				Username:     "Jon Doe",
+				Email:        "jondoe@example.com",
+				Phone:        "1234567890",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		userRepo := mocks.NewMockUserRepository(t)
+		authSessionRepo := mocks.NewMockAuthenticationSessionRepository(t)
+
+		if tt.setupMock != nil {
+			tt.setupMock(userRepo)
+		}
+
+		svc := service.NewUserService(userRepo, authSessionRepo)
+
+		_, err := svc.Login(context.Background(), tt.request)
+
+		assert.ErrorIs(t, err, tt.expectedErr)
+		userRepo.AssertExpectations(t)
+		authSessionRepo.AssertExpectations(t)
 	}
 }

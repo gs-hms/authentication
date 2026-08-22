@@ -98,6 +98,10 @@ func (s *userService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 		return nil, ErrUserNotFound
 	}
 
+	if !user.IsActive {
+		return nil, ErrInactiveUser
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
