@@ -26,6 +26,12 @@ func main() {
 	}
 	defer db.Pool.Close()
 
+	redisConn, err := database.ConnectRedis(ctx)
+	if err != nil {
+		log.Printf("Failed to connect to redis: %v", err)
+		redisConn = &database.Redis{Client: nil}
+	}
+
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -39,9 +45,9 @@ func main() {
 
 	v1 := r.Group("/v1")
 	userRouter := v1.Group("/user")
-	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo)
+	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo, redisConn.Client)
 	profileRouter := v1.Group("/profile")
-	router.RegisterProfileRoutes(profileRouter, userRepo)
+	router.RegisterProfileRoutes(profileRouter, userRepo, redisConn.Client)
 
 	err = r.Run()
 	if err != nil {

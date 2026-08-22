@@ -4,6 +4,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
@@ -14,6 +15,7 @@ import (
 type UserHandler interface {
 	Signup(ctx *gin.Context)
 	Login(ctx *gin.Context)
+	Logout(ctx *gin.Context)
 }
 
 type userHandler struct {
@@ -72,4 +74,43 @@ func (h *userHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+func (h *userHandler) Logout(c *gin.Context) {
+	var req dto.LogoutRequest
+	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	jtiVal, exists := c.Get("jti")
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "jti not found in context"})
+		return
+	}
+	jti, ok := jtiVal.(string)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "invalid jti format"})
+		return
+	}
+
+	expVal, exists := c.Get("exp")
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "exp not found in context"})
+		return
+	}
+	exp, ok := expVal.(time.Time)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "invalid exp format"})
+		return
+	}
+
+	if err := h.userService.Logout(c, jti, exp, &req); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logout successful",
+	})
 }

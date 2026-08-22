@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	"github.com/supermarios-hotel-management-system/authentication/model"
 	"github.com/supermarios-hotel-management-system/authentication/repository"
@@ -23,19 +24,45 @@ type UserService interface {
 	// Signup creates a new user.
 	Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error)
 	Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error)
+	Logout(ctx context.Context, jti string, exp time.Time, req *dto.LogoutRequest) error
 }
 
 type userService struct {
 	userRepo        repository.UserRepository
 	authSessionRepo repository.AuthenticationSessionRepository
+	redisClient     *redis.Client
 }
 
 // NewUserService creates a new instance of the UserService.
-func NewUserService(userRepo repository.UserRepository, authSessionRepo repository.AuthenticationSessionRepository) UserService {
+func NewUserService(userRepo repository.UserRepository, authSessionRepo repository.AuthenticationSessionRepository, redisClient *redis.Client) UserService {
 	return &userService{
 		userRepo:        userRepo,
 		authSessionRepo: authSessionRepo,
+		redisClient:     redisClient,
 	}
+}
+
+func (s *userService) Logout(ctx context.Context, jti string, exp time.Time, req *dto.LogoutRequest) error {
+	// Revoke the authentication session
+	session, err := s.authSessionRepo.GetActiveSessionByRefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		return fmt.Errorf("failed to get active session: %w", err)
+	}
+	if session != nil {
+		if err := s.authSessionRepo.RevokeSession(ctx, session.ID); err != nil {
+			return fmt.Errorf("failed to revoke session: %w", err)
+		}
+	}
+
+	// Blacklist the access token's JTI in Redis
+	ttl := time.Until(exp)
+	if ttl > 0 {
+		if err := s.redisClient.Set(ctx, jti, "blacklisted", ttl).Err(); err != nil {
+			return fmt.Errorf("failed to blacklist token: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error) {
