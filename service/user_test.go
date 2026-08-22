@@ -163,12 +163,12 @@ func TestLogin(t *testing.T) {
 					mock.Anything,
 					"jondoe@example.com",
 				).Return(&model.User{
-					ID:        1,
-					FirstName: "John",
-					LastName:  "Doe",
-					Email:     "jondoe@example.com",
-					Phone:     "1234567890",
-					PasswordHash:  "hashed-password",
+					ID:           1,
+					FirstName:    "John",
+					LastName:     "Doe",
+					Email:        "jondoe@example.com",
+					Phone:        "1234567890",
+					PasswordHash: "hashed-password",
 				}, nil)
 			},
 			expectedErr: nil,
