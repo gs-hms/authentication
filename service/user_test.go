@@ -2,11 +2,13 @@ package service_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	mocks "github.com/supermarios-hotel-management-system/authentication/mocks/github.com/supermarios-hotel-management-system/authentication/repository"
@@ -35,7 +37,7 @@ type signupTestCase struct {
 type loginTestCase struct {
 	name         string
 	request      *dto.LoginRequest
-	setupMock    func(repo *mocks.MockUserRepository)
+	setupMock    func(repo *mocks.MockUserRepository, authSessionRepo *mocks.MockAuthenticationSessionRepository)
 	expectedErr  error
 	expectedResp *dto.LoginResponse
 }
@@ -150,6 +152,9 @@ func TestSignUp(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
+	os.Setenv("JWT_SECRET_STRING", "secret")
+	defer os.Unsetenv("JWT_SECRET_STRING")
+
 	tests := []loginTestCase{
 		{
 			name: "successful login",
@@ -157,7 +162,8 @@ func TestLogin(t *testing.T) {
 				Email:    "jondoe@example.com",
 				Password: "password",
 			},
-			setupMock: func(repo *mocks.MockUserRepository) {
+			setupMock: func(repo *mocks.MockUserRepository, authSessionRepo *mocks.MockAuthenticationSessionRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 				repo.On(
 					"GetByEmail",
 					mock.Anything,
@@ -168,8 +174,16 @@ func TestLogin(t *testing.T) {
 					LastName:     "Doe",
 					Email:        "jondoe@example.com",
 					Phone:        "1234567890",
-					PasswordHash: "hashed-password",
+					PasswordHash: string(hash),
+					IsActive:     true,
 				}, nil)
+				authSessionRepo.On(
+					"CreateSession",
+					mock.Anything,
+					uint64(1),
+					mock.AnythingOfType("string"),
+					mock.Anything,
+				).Return(nil)
 			},
 			expectedErr: nil,
 			expectedResp: &dto.LoginResponse{
@@ -188,7 +202,7 @@ func TestLogin(t *testing.T) {
 		authSessionRepo := mocks.NewMockAuthenticationSessionRepository(t)
 
 		if tt.setupMock != nil {
-			tt.setupMock(userRepo)
+			tt.setupMock(userRepo, authSessionRepo)
 		}
 
 		svc := service.NewUserService(userRepo, authSessionRepo)
