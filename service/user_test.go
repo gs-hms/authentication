@@ -2,9 +2,12 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/go-redis/redismock/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
@@ -139,7 +142,8 @@ func TestSignUp(t *testing.T) {
 				tt.setupMock(userRepo)
 			}
 
-			svc := service.NewUserService(userRepo, authSessionRepo)
+			client, _ := redismock.NewClientMock()
+			svc := service.NewUserService(userRepo, authSessionRepo, client)
 
 			_, err := svc.Signup(context.Background(), tt.request)
 
@@ -258,12 +262,90 @@ func TestLogin(t *testing.T) {
 			tt.setupMock(userRepo, authSessionRepo)
 		}
 
-		svc := service.NewUserService(userRepo, authSessionRepo)
+		client, _ := redismock.NewClientMock()
+		svc := service.NewUserService(userRepo, authSessionRepo, client)
 
 		_, err := svc.Login(context.Background(), tt.request)
 
 		assert.ErrorIs(t, err, tt.expectedErr)
 		userRepo.AssertExpectations(t)
 		authSessionRepo.AssertExpectations(t)
+	}
+}
+
+func TestLogout(t *testing.T) {
+	tests := []struct {
+		name        string
+		req         *dto.LogoutRequest
+		userID      uint64
+		jti         string
+		exp         time.Time
+		setupMock   func(authSessionRepo *mocks.MockAuthenticationSessionRepository, redisMock redismock.ClientMock)
+		expectedErr error
+	}{
+		{
+			name:   "successful logout",
+			req:    &dto.LogoutRequest{RefreshToken: "valid-refresh-token"},
+			userID: 1,
+			jti:    "test-jti",
+			exp:    time.Now().Add(1 * time.Hour),
+			setupMock: func(repo *mocks.MockAuthenticationSessionRepository, redisMock redismock.ClientMock) {
+				repo.On("GetActiveSessionByRefreshToken", context.Background(), "valid-refresh-token").
+					Return(&model.AuthenticationSession{ID: 10, UserID: 1}, nil)
+				repo.On("RevokeSession", context.Background(), uint64(10)).Return(nil)
+				redisMock.ExpectSet("test-jti", "blacklisted", 1*time.Hour).SetVal("OK")
+			},
+			expectedErr: nil,
+		},
+		{
+			name:   "unauthorized session revocation (IDOR)",
+			req:    &dto.LogoutRequest{RefreshToken: "other-user-token"},
+			userID: 1,
+			jti:    "test-jti",
+			exp:    time.Now().Add(1 * time.Hour),
+			setupMock: func(repo *mocks.MockAuthenticationSessionRepository, _ redismock.ClientMock) {
+				repo.On("GetActiveSessionByRefreshToken", context.Background(), "other-user-token").
+					Return(&model.AuthenticationSession{ID: 10, UserID: 2}, nil)
+			},
+			expectedErr: errors.New("unauthorized session revocation"),
+		},
+		{
+			name:   "get session error",
+			req:    &dto.LogoutRequest{RefreshToken: "error-token"},
+			userID: 1,
+			jti:    "test-jti",
+			exp:    time.Now().Add(1 * time.Hour),
+			setupMock: func(repo *mocks.MockAuthenticationSessionRepository, _ redismock.ClientMock) {
+				repo.On("GetActiveSessionByRefreshToken", context.Background(), "error-token").
+					Return(nil, errors.New("db error"))
+			},
+			expectedErr: errors.New("failed to get active session: db error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userRepo := mocks.NewMockUserRepository(t)
+			authSessionRepo := mocks.NewMockAuthenticationSessionRepository(t)
+			client, redisMock := redismock.NewClientMock()
+
+			if tt.setupMock != nil {
+				tt.setupMock(authSessionRepo, redisMock)
+			}
+
+			svc := service.NewUserService(userRepo, authSessionRepo, client)
+
+			err := svc.Logout(context.Background(), tt.userID, tt.jti, tt.exp, tt.req)
+
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			userRepo.AssertExpectations(t)
+			authSessionRepo.AssertExpectations(t)
+			assert.NoError(t, redisMock.ExpectationsWereMet())
+		})
 	}
 }

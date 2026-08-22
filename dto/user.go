@@ -22,6 +22,11 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// LogoutRequest represents the request object for user logout.
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
 // LoginResponse represents the response object for user login.
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`

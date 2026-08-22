@@ -1,17 +1,19 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 )
 
 // AuthMiddleware is a gin middleware that authenticates requests using JWT.
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(redisClient *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -45,9 +47,25 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Check if token is blacklisted in Redis
+		if redisClient != nil {
+			err := redisClient.Get(c.Request.Context(), claims.ID).Err()
+			if err == nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
+				return
+			} else if !errors.Is(err, redis.Nil) {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token status"})
+				return
+			}
+		}
+
 		c.Set("user_id", claims.UserID)
 		c.Set("user_name", claims.Name)
 		c.Set("email", claims.Email)
+		c.Set("jti", claims.ID)
+		if claims.ExpiresAt != nil {
+			c.Set("exp", claims.ExpiresAt.Time)
+		}
 		c.Next()
 	}
 }
