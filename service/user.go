@@ -24,7 +24,7 @@ type UserService interface {
 	// Signup creates a new user.
 	Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error)
 	Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error)
-	Logout(ctx context.Context, jti string, exp time.Time, req *dto.LogoutRequest) error
+	Logout(ctx context.Context, userID uint64, jti string, exp time.Time, req *dto.LogoutRequest) error
 }
 
 type userService struct {
@@ -42,21 +42,25 @@ func NewUserService(userRepo repository.UserRepository, authSessionRepo reposito
 	}
 }
 
-func (s *userService) Logout(ctx context.Context, jti string, exp time.Time, req *dto.LogoutRequest) error {
+func (s *userService) Logout(ctx context.Context, userID uint64, jti string, exp time.Time, req *dto.LogoutRequest) error {
 	// Revoke the authentication session
 	session, err := s.authSessionRepo.GetActiveSessionByRefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		return fmt.Errorf("failed to get active session: %w", err)
 	}
 	if session != nil {
+		if session.UserID != userID {
+			return errors.New("unauthorized session revocation")
+		}
 		if err := s.authSessionRepo.RevokeSession(ctx, session.ID); err != nil {
 			return fmt.Errorf("failed to revoke session: %w", err)
 		}
 	}
 
 	// Blacklist the access token's JTI in Redis
-	ttl := time.Until(exp)
-	if ttl > 0 {
+	ttl := time.Until(exp).Round(time.Second)
+	if ttl > 0 && s.redisClient != nil {
+
 		if err := s.redisClient.Set(ctx, jti, "blacklisted", ttl).Err(); err != nil {
 			return fmt.Errorf("failed to blacklist token: %w", err)
 		}

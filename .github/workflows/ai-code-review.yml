@@ -6,7 +6,6 @@ on:
       - '**devComplete'
     types:
       - opened
-      - synchronize
       - reopened
       - ready_for_review
 

@@ -105,7 +105,29 @@ func (h *userHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.Logout(c, jti, exp, &req); err != nil {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "user_id not found in context"})
+		return
+	}
+	userID, ok := userIDVal.(uint64)
+	if !ok {
+		// Float64 check since JWT might parse numbers as float64 depending on how it's handled,
+		// though claims.UserID is uint64. But let's safely cast it or try float64.
+		userIDFloat, okFloat := userIDVal.(float64)
+		if okFloat {
+			userID = uint64(userIDFloat)
+		} else {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "invalid user_id format"})
+			return
+		}
+	}
+
+	if err := h.userService.Logout(c, userID, jti, exp, &req); err != nil {
+		if err.Error() == "unauthorized session revocation" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

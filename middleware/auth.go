@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -50,9 +49,12 @@ func AuthMiddleware(redisClient *redis.Client) gin.HandlerFunc {
 
 		// Check if token is blacklisted in Redis
 		if redisClient != nil {
-			err := redisClient.Get(context.Background(), claims.ID).Err()
-			if !errors.Is(err, redis.Nil) {
+			err := redisClient.Get(c.Request.Context(), claims.ID).Err()
+			if err == nil {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
+				return
+			} else if !errors.Is(err, redis.Nil) {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token status"})
 				return
 			}
 		}
