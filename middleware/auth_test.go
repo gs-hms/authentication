@@ -60,7 +60,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	t.Run("expired token", func(t *testing.T) {
 		client, _ := redismock.NewClientMock()
-		
+
 		r := gin.New()
 		r.Use(middleware.AuthMiddleware(client))
 		r.GET("/test", func(c *gin.Context) { c.Status(200) })
@@ -95,7 +95,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "token has been revoked")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
-	
+
 	t.Run("missing authorization header", func(t *testing.T) {
 		client, _ := redismock.NewClientMock()
 

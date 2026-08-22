@@ -22,4 +22,3 @@ func RegisterProfileRoutes(r *gin.RouterGroup, userRepo repository.UserRepositor
 		protected.PUT("/password", profileHandler.ChangePassword)
 	}
 }
-
