@@ -24,7 +24,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26.3'
           cache: true
 
       # ----------------------------------------
@@ -81,7 +81,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          version: v2.13.1
           args: ./...
 
       # ----------------------------------------
