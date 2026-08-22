@@ -9,6 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/supermarios-hotel-management-system/authentication/database"
+	"github.com/supermarios-hotel-management-system/authentication/repository"
+	"github.com/supermarios-hotel-management-system/authentication/router"
 )
 
 func main() {
@@ -31,6 +33,13 @@ func main() {
 			"message": "OK",
 		})
 	})
+
+	authSessionRepo := repository.NewAuthenticationSessionRepository(db)
+	userRepo := repository.NewUserRepository(db)
+
+	v1 := r.Group("/v1")
+	userRouter := v1.Group("/user")
+	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo)
 
 	err = r.Run()
 	if err != nil {

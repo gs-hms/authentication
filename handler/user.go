@@ -1,3 +1,4 @@
+// Package handler provides the HTTP handlers for the user service.
 package handler
 
 import (
@@ -9,14 +10,17 @@ import (
 	"github.com/supermarios-hotel-management-system/authentication/service"
 )
 
+// UserHandler defines the interface for the user handler.
 type UserHandler interface {
 	Signup(ctx *gin.Context)
+	Login(ctx *gin.Context)
 }
 
 type userHandler struct {
 	userService service.UserService
 }
 
+// NewUserHandler creates a new instance of the UserHandler.
 func NewUserHandler(userService service.UserService) UserHandler {
 	return &userHandler{
 		userService: userService,
