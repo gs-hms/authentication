@@ -1,201 +1,202 @@
+```yaml
 name: AI Code Review
 
 on:
   pull_request:
+    branches:
+      - '**devComplete'
     types:
       - opened
       - synchronize
       - reopened
+      - ready_for_review
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  ai-review:
+  ai-code-review:
     name: AI Code Review
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Run Gemini Code Review
+        uses: sshnaidm/gemini-code-review-action@v2
         with:
-          fetch-depth: 0
+          gemini-key: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: Get PR diff
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
+          # Use the model available to your Gemini API account.
+          model: gemini-3.6-flash
 
-          echo "Getting PR diff..."
+          # Keep the review focused on your Go authentication service.
+          prompt: |
+            You are a senior Go backend engineer and application
+            security reviewer.
 
-          gh pr diff \
-            "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
-            > pr.diff
+            Review this Pull Request for a Go Authentication Service
+            belonging to a Hotel Management System.
 
-          echo "Diff size:"
-          wc -c pr.diff
+            IMPORTANT:
+            - Review only the actual changes in this Pull Request.
+            - Do not report subjective style preferences.
+            - Do not report formatting issues handled by gofmt.
+            - Do not invent vulnerabilities.
+            - Only report actionable and meaningful issues.
+            - Prioritize correctness and security over style.
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+            Review the following areas:
 
-      - name: Run AI code review
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -e
+            1. GO CODE QUALITY
 
-          python3 <<'PY'
-          import json
-          import os
-          import urllib.request
-          import urllib.error
-          import subprocess
+            Check for:
+            - Incorrect error handling
+            - Nil pointer risks
+            - Goroutine leaks
+            - Race conditions
+            - Context misuse
+            - Resource leaks
+            - Incorrect concurrency
+            - Unnecessary complexity
+            - Poor package boundaries
+            - Incorrect interface usage
 
-          API_KEY = os.environ["GEMINI_API_KEY"]
-          PR_NUMBER = os.environ["PR_NUMBER"]
-          REPOSITORY = os.environ["REPOSITORY"]
+            2. AUTHENTICATION
 
-          MODEL = "gemini-3.6-flash"
+            Check for:
+            - Authentication bypasses
+            - Incorrect login logic
+            - Password handling problems
+            - Password leakage
+            - Incorrect password verification
+            - Account security issues
+            - Authentication state problems
 
-          with open("pr.diff", "r", encoding="utf-8", errors="replace") as file:
-              diff = file.read()
+            3. JWT SECURITY
 
-          if not diff.strip():
-              print("No changes found in PR.")
-              exit(0)
+            Check for:
+            - Missing signature validation
+            - Incorrect algorithm validation
+            - Expired token acceptance
+            - Incorrect issuer validation
+            - Incorrect audience validation
+            - Token manipulation
+            - Refresh token problems
+            - Token replay risks
+            - Insecure secret handling
 
-          # Prevent extremely large PRs from consuming excessive API quota.
-          MAX_DIFF_SIZE = 100000
+            Never assume that decoding a JWT means that it is valid.
 
-          if len(diff) > MAX_DIFF_SIZE:
-              print(
-                  f"Diff is {len(diff)} bytes. "
-                  f"Limiting to {MAX_DIFF_SIZE} bytes."
-              )
-              diff = diff[:MAX_DIFF_SIZE]
+            4. AUTHORIZATION
 
-          prompt = f"""
-          You are a senior Go backend engineer and security reviewer.
+            Check for:
+            - Missing authorization checks
+            - Role escalation
+            - Privilege escalation
+            - IDOR vulnerabilities
+            - Resource ownership problems
+            - Accessing another user's resources
 
-          Review this Pull Request for a Go Authentication Service
-          belonging to a Hotel Management System.
+            5. API SECURITY
 
-          Your job is to identify real and actionable problems.
+            Check for:
+            - Missing authentication middleware
+            - Missing authorization middleware
+            - Missing input validation
+            - SQL injection
+            - Sensitive information disclosure
+            - Sensitive information in logs
+            - Incorrect HTTP status codes
+            - Excessive error information
+            - Missing security controls
 
-          DO NOT:
-          - Complain about formatting handled by gofmt.
-          - Report subjective stylistic preferences.
-          - Invent vulnerabilities.
-          - Give unnecessary praise.
-          - Report issues unrelated to the changed code.
+            6. DATABASE
 
-          REVIEW FOR:
+            Check for:
+            - SQL injection
+            - Unsafe queries
+            - Incorrect transactions
+            - Connection/resource leaks
+            - Incorrect constraints
+            - Obvious performance problems
+            - Incorrect data handling
 
-          GO CODE QUALITY
-          - Incorrect error handling
-          - Nil pointer risks
-          - Goroutine leaks
-          - Race conditions
-          - Context misuse
-          - Resource leaks
-          - Incorrect concurrency
-          - Unnecessary complexity
+            7. TESTING
 
-          AUTHENTICATION SECURITY
-          - Authentication bypasses
-          - Authorization bypasses
-          - Privilege escalation
-          - JWT validation
-          - JWT expiration
-          - JWT algorithm validation
-          - Token handling
-          - Token replay
-          - Password handling
-          - Sensitive information exposure
+            Check whether important changes have appropriate tests.
 
-          API SECURITY
-          - Missing authentication middleware
-          - Missing authorization checks
-          - IDOR vulnerabilities
-          - Missing input validation
-          - SQL injection
-          - Sensitive data in API responses
-          - Sensitive data in logs
-          - Incorrect HTTP status codes
+            Pay particular attention to:
+            - Successful authentication
+            - Invalid credentials
+            - Expired tokens
+            - Invalid tokens
+            - Unauthorized requests
+            - Forbidden requests
+            - Password changes
+            - Profile updates
+            - Role/permission checks
+            - Security edge cases
 
-          DATABASE
-          - SQL injection
-          - Incorrect transactions
-          - Connection/resource leaks
-          - Incorrect queries
-          - Obvious performance issues
+            8. ERROR HANDLING
 
-          TESTING
-          - Missing tests for important functionality
-          - Missing authentication failure tests
-          - Missing authorization tests
-          - Missing security edge cases
-          - Tests that do not validate the intended behavior
+            Check for:
+            - Errors being ignored
+            - Incorrect error propagation
+            - Sensitive information being returned
+            - Incorrect HTTP responses
+            - Errors being logged incorrectly
 
-          SEVERITY:
+            SEVERITY LEVELS:
 
-          CRITICAL
-          Serious security vulnerability, authentication bypass,
-          remote code execution, or major data exposure.
+            CRITICAL:
+            Serious security vulnerability, authentication bypass,
+            remote code execution, or major data exposure.
 
-          HIGH
-          Significant security issue, authorization bypass,
-          serious production bug, or data corruption.
+            HIGH:
+            Significant security issue, authorization bypass,
+            serious production bug, or data corruption.
 
-          MEDIUM
-          Real bug, reliability issue, important validation problem,
-          or significant maintainability issue.
+            MEDIUM:
+            Real bug, reliability problem, important validation issue,
+            or significant maintainability problem.
 
-          LOW
-          Minor but legitimate improvement.
+            LOW:
+            Minor but legitimate improvement.
 
-          OUTPUT FORMAT:
+            REVIEW FORMAT:
 
-          ## AI Code Review
+            Start with a short summary.
 
-          ### Summary
+            For every finding include:
 
-          Briefly summarize the review.
+            [SEVERITY] Short title
 
-          ### Findings
+            File:
+            path/to/file.go
 
-          For every finding:
+            Problem:
+            Explain the problem clearly.
 
-          #### [SEVERITY] Short title
+            Why it matters:
+            Explain the potential impact.
 
-          **File:** `path/to/file.go`
+            Recommendation:
+            Explain how it should be fixed.
 
-          **Problem:**
-          Explain the problem.
+            Do not report a finding merely because you would
+            personally implement the code differently.
 
-          **Why it matters:**
-          Explain the impact.
+          # Include additional context from the repository.
+          add-files: 'true'
 
-          **Recommendation:**
-          Explain how to fix it.
+          # Give Gemini enough surrounding code to understand
+          # the changed lines.
+          context-lines: '20'
 
-          If there are no meaningful issues, write:
+          # Keep the review comment clearly identifiable.
+          review-title: '🤖 AI Code Review'
 
-          No critical, high, medium, or low severity issues found.
-
-          PR DIFF:
-
-          ```diff
-          {diff}
-          ```
-          """
-
-          url =
+          # Do not make the CI pipeline fail just because the
+          # AI reviewer encounters an API/runtime problem.
+          post-if-error: 'true'
+```
