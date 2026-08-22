@@ -15,6 +15,7 @@ The project is also structured as a portfolio/hobby project to demonstrate produ
 - JWT-based authorization
 - Secure password handling
 - Token validation
+- Session revocation and JWT blacklisting
 - RESTful APIs
 - Database-backed user management
 - Input validation
@@ -27,6 +28,7 @@ The project is also structured as a portfolio/hobby project to demonstrate produ
 | ---------- | ------- |
 | Go | Backend service |
 | PostgreSQL | Persistent data storage |
+| Redis | JWT blacklisting |
 | JWT | Authentication and authorization |
 | golangci-lint | Static analysis and linting |
 | gofmt | Code formatting |
@@ -62,6 +64,7 @@ authentication/
 Make sure you have the following installed:
 - Go 1.25+
 - PostgreSQL
+- Redis
 - Git
 - [golang-migrate](https://github.com/golang-migrate/migrate) (for database migrations)
 
@@ -80,6 +83,7 @@ Example `env.vars`:
 ```bash
 export DATABASE_URL="postgres://postgres:postgres@localhost:5432/authentication?sslmode=disable"
 export JWT_SECRET_STRING="your-jwt-secret-string"
+export REDIS_URL="redis://localhost:6379/0"
 ```
 
 Never commit real secrets to the repository. Note that `env.vars` in this repo currently contains local development defaults.
@@ -153,8 +157,12 @@ make lint
 The service exposes REST APIs for authentication.
 
 Endpoints:
-- `POST /signup` - Register a new user
-- `POST /login` - Authenticate and receive a JWT
+- `POST /v1/user/signup` - Register a new user
+- `POST /v1/user/login` - Authenticate and receive a JWT
+- `POST /v1/user/logout` - Revoke current session and blacklist JWT
+- `GET /v1/profile/` - Retrieve user profile details
+- `PUT /v1/profile/` - Update user profile details
+- `PUT /v1/profile/password` - Change user password
 
 ## Security
 
