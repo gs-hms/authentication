@@ -123,18 +123,20 @@ func TestSignUp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := mocks.NewMockUserRepository(t)
+			userRepo := mocks.NewMockUserRepository(t)
+			authSessionRepo := mocks.NewMockAuthenticationSessionRepository(t)
 
 			if tt.setupMock != nil {
-				tt.setupMock(repo)
+				tt.setupMock(userRepo)
 			}
 
-			svc := service.NewUserService(repo)
+			svc := service.NewUserService(userRepo, authSessionRepo)
 
 			_, err := svc.Signup(context.Background(), tt.request)
 
 			assert.ErrorIs(t, err, tt.expectedErr)
-			repo.AssertExpectations(t)
+			userRepo.AssertExpectations(t)
+			authSessionRepo.AssertExpectations(t)
 		})
 	}
 }

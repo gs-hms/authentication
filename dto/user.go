@@ -16,11 +16,13 @@ type SignupRequest struct {
 	Password  string             `json:"password" validate:"required"`
 }
 
+// LoginRequest represents the request object for user login.
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
 
+// LoginResponse represents the response object for user login.
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -30,6 +32,7 @@ type LoginResponse struct {
 	Phone        string `json:"phone"`
 }
 
+// Claims represents the claims for the JWT token.
 type Claims struct {
 	UserID uint64 `json:"user_id"`
 	Email  string `json:"email"`

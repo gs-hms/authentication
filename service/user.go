@@ -25,13 +25,15 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepo repository.UserRepository
+	userRepo        repository.UserRepository
+	authSessionRepo repository.AuthenticationSessionRepository
 }
 
 // NewUserService creates a new instance of the UserService.
-func NewUserService(userRepo repository.UserRepository) UserService {
+func NewUserService(userRepo repository.UserRepository, authSessionRepo repository.AuthenticationSessionRepository) UserService {
 	return &userService{
-		userRepo: userRepo,
+		userRepo:        userRepo,
+		authSessionRepo: authSessionRepo,
 	}
 }
 
@@ -99,7 +101,7 @@ func (s *userService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 		return nil, ErrInvalidCredentials
 	}
 
-	return s.generateTokens(user)
+	return s.generateTokens(ctx, user)
 }
 
 // Private method
@@ -116,7 +118,7 @@ func (s *userService) validateContactDetails(email string, dialCode model.UserDi
 }
 
 // Private method
-func (s *userService) generateTokens(user *model.User) (*dto.LoginResponse, error) {
+func (s *userService) generateTokens(ctx context.Context, user *model.User) (*dto.LoginResponse, error) {
 	if user == nil && user.ID == 0 && user.Email == "" {
 		return nil, errors.New("generateTokens: invalid request")
 	}
@@ -146,9 +148,18 @@ func (s *userService) generateTokens(user *model.User) (*dto.LoginResponse, erro
 		return nil, fmt.Errorf("generateTokens: failed to sign access token: %w", err)
 	}
 
+	authSession, err := model.NewAuthenticationSession(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("generateTokens: failed to create authentication session: %w", err)
+	}
+
+	if err := s.authSessionRepo.CreateSession(ctx, user.ID, authSession.RefreshToken, authSession.ExpiresAt); err != nil {
+		return nil, fmt.Errorf("generateTokens: failed to create authentication session: %w", err)
+	}
+
 	resp := &dto.LoginResponse{
 		AccessToken:  accessToken,
-		RefreshToken: "",
+		RefreshToken: authSession.RefreshToken,
 		UserID:       user.ID,
 		Username:     fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		Email:        user.Email,

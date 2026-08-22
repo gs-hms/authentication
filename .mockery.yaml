@@ -4,3 +4,4 @@ packages:
   github.com/supermarios-hotel-management-system/authentication/repository:
     interfaces:
       UserRepository:
+      AuthenticationSessionRepository:
