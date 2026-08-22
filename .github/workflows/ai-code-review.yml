@@ -1,0 +1,288 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          echo "Getting PR diff..."
+
+          gh pr diff "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            > pr.diff
+
+          echo "Diff size:"
+          wc -c pr.diff
+
+      - name: Run AI code review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -e
+
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.request
+          import urllib.error
+          import subprocess
+
+          api_key = os.environ["GEMINI_API_KEY"]
+          pr_number = os.environ["PR_NUMBER"]
+          repository = os.environ["REPOSITORY"]
+
+          with open("pr.diff", "r", encoding="utf-8", errors="replace") as f:
+              diff = f.read()
+
+          if not diff.strip():
+              print("No changes found in PR.")
+              raise SystemExit(0)
+
+          # Prevent accidentally sending an enormous diff.
+          max_diff_size = 100000
+
+          if len(diff) > max_diff_size:
+              print(
+                  f"PR diff is too large ({len(diff)} bytes). "
+                  f"Limiting review to {max_diff_size} bytes."
+              )
+              diff = diff[:max_diff_size]
+
+          prompt = f"""
+          You are a senior Go backend engineer and security reviewer.
+
+          Review the following Pull Request for a Go Authentication Service
+          belonging to a Hotel Management System.
+
+          Your review must focus on real, actionable problems.
+
+          IMPORTANT:
+          - Do NOT complain about formatting that gofmt handles.
+          - Do NOT report harmless stylistic preferences.
+          - Do NOT invent vulnerabilities.
+          - Do NOT praise the code unnecessarily.
+          - Focus on problems that could actually affect correctness,
+            security, reliability, maintainability, or testing.
+          - Review only the changes shown in the diff.
+          - Consider the surrounding code when necessary.
+
+          Review the code for:
+
+          1. GO CODE QUALITY
+          - Incorrect error handling
+          - Nil pointer risks
+          - Goroutine leaks
+          - Race conditions
+          - Context misuse
+          - Resource leaks
+          - Poor package boundaries
+          - Unnecessary complexity
+          - Incorrect concurrency
+
+          2. AUTHENTICATION SECURITY
+          - Authentication bypasses
+          - Authorization bypasses
+          - Privilege escalation
+          - JWT validation problems
+          - JWT expiration problems
+          - JWT algorithm issues
+          - Token handling problems
+          - Token replay issues
+          - Password handling problems
+          - Password leakage
+          - Sensitive data exposure
+
+          3. API SECURITY
+          - Missing authentication middleware
+          - Missing authorization checks
+          - IDOR vulnerabilities
+          - Missing input validation
+          - SQL injection
+          - Improper error responses
+          - Sensitive information in responses
+          - Sensitive information in logs
+
+          4. DATABASE
+          - SQL injection
+          - Incorrect transactions
+          - Connection leaks
+          - Incorrect queries
+          - Missing important constraints
+          - Obvious performance problems
+
+          5. TESTING
+          - Missing tests for important functionality
+          - Missing authentication failure tests
+          - Missing authorization tests
+          - Missing security edge cases
+          - Tests that don't actually validate the intended behavior
+
+          SEVERITY LEVELS:
+
+          CRITICAL
+          - Serious security vulnerability
+          - Authentication bypass
+          - Remote code execution
+          - Major data exposure
+
+          HIGH
+          - Significant security issue
+          - Authorization bypass
+          - Data corruption
+          - Serious production bug
+
+          MEDIUM
+          - Real bug or meaningful reliability issue
+          - Important missing validation
+          - Significant maintainability problem
+
+          LOW
+          - Minor but legitimate improvement
+
+          OUTPUT FORMAT:
+
+          Start with:
+
+          ## AI Code Review
+
+          Then provide:
+
+          ### Summary
+
+          A short summary of the overall review.
+
+          ### Findings
+
+          For every finding use:
+
+          #### [SEVERITY] Short title
+
+          **File:** `path/to/file.go`
+
+          **Problem:**
+          Explain the problem.
+
+          **Why it matters:**
+          Explain the impact.
+
+          **Recommendation:**
+          Explain how to fix it.
+
+          If there are no meaningful issues, say:
+
+          No critical, high, medium, or low severity issues found.
+
+          Pull Request diff:
+
+          ```diff
+          {diff}
+          ```
+          """
+
+          url = (
+              "https://generativelanguage.googleapis.com/v1beta/models/"
+              "gemini-2.5-flash:generateContent"
+              f"?key={api_key}"
+          )
+
+          payload = {
+              "contents": [
+                  {
+                      "parts": [
+                          {
+                              "text": prompt
+                          }
+                      ]
+                  }
+              ],
+              "generationConfig": {
+                  "temperature": 0.1,
+                  "maxOutputTokens": 4096
+              }
+          }
+
+          request = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json"
+              },
+              method="POST"
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  result = json.loads(response.read().decode("utf-8"))
+
+          except urllib.error.HTTPError as e:
+              body = e.read().decode("utf-8", errors="replace")
+              print("Gemini API request failed:")
+              print(body)
+              raise
+
+          except Exception as e:
+              print(f"Failed to call Gemini API: {e}")
+              raise
+
+          try:
+              review = result["candidates"][0]["content"]["parts"][0]["text"]
+          except (KeyError, IndexError, TypeError):
+              print("Unexpected Gemini response:")
+              print(json.dumps(result, indent=2))
+              raise RuntimeError("Could not extract AI review.")
+
+          if not review.strip():
+              raise RuntimeError("AI returned an empty review.")
+
+          # GitHub comment limit is large, but keeping individual comments
+          # manageable is useful.
+          max_comment_size = 60000
+
+          if len(review) > max_comment_size:
+              review = review[:max_comment_size]
+              review += "\n\n> Review truncated because it exceeded the comment size limit."
+
+          comment = review
+
+          subprocess.run(
+              [
+                  "gh",
+                  "pr",
+                  "comment",
+                  pr_number,
+                  "--repo",
+                  repository,
+                  "--body",
+                  comment
+              ],
+              check=True
+          )
+
+          print("AI review posted successfully.")
