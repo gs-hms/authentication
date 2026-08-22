@@ -193,6 +193,61 @@ func TestLogin(t *testing.T) {
 				Phone:        "1234567890",
 			},
 		},
+		{
+			name: "empty email",
+			request: &dto.LoginRequest{
+				Email:    "   ",
+				Password: "password",
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
+		{
+			name: "empty password",
+			request: &dto.LoginRequest{
+				Email:    "jondoe@example.com",
+				Password: "   ",
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
+		{
+			name: "invalid email (user not found)",
+			request: &dto.LoginRequest{
+				Email:    "notfound@example.com",
+				Password: "password",
+			},
+			setupMock: func(repo *mocks.MockUserRepository, _ *mocks.MockAuthenticationSessionRepository) {
+				repo.On(
+					"GetByEmail",
+					mock.Anything,
+					"notfound@example.com",
+				).Return(nil, nil)
+			},
+			expectedErr: service.ErrUserNotFound,
+		},
+		{
+			name: "incorrect credentials",
+			request: &dto.LoginRequest{
+				Email:    "jondoe@example.com",
+				Password: "wrongpassword",
+			},
+			setupMock: func(repo *mocks.MockUserRepository, _ *mocks.MockAuthenticationSessionRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+				repo.On(
+					"GetByEmail",
+					mock.Anything,
+					"jondoe@example.com",
+				).Return(&model.User{
+					ID:           1,
+					FirstName:    "John",
+					LastName:     "Doe",
+					Email:        "jondoe@example.com",
+					Phone:        "1234567890",
+					PasswordHash: string(hash),
+					IsActive:     true,
+				}, nil)
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
 	}
 
 	for _, tt := range tests {
