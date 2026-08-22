@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -152,8 +151,7 @@ func TestSignUp(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	os.Setenv("JWT_SECRET_STRING", "secret")
-	defer os.Unsetenv("JWT_SECRET_STRING")
+	t.Setenv("JWT_SECRET_STRING", "secret")
 
 	tests := []loginTestCase{
 		{
