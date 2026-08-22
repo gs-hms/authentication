@@ -23,4 +23,7 @@ var (
 
 	// ErrInactiveUser is returned when the user is not active.
 	ErrInactiveUser = errors.New("inactive user")
+
+	// ErrIncorrectPassword is returned when the password provided is incorrect.
+	ErrIncorrectPassword = errors.New("incorrect current password")
 )

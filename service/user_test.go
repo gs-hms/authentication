@@ -7,6 +7,7 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	mocks "github.com/supermarios-hotel-management-system/authentication/mocks/github.com/supermarios-hotel-management-system/authentication/repository"
@@ -35,7 +36,7 @@ type signupTestCase struct {
 type loginTestCase struct {
 	name         string
 	request      *dto.LoginRequest
-	setupMock    func(repo *mocks.MockUserRepository)
+	setupMock    func(repo *mocks.MockUserRepository, authSessionRepo *mocks.MockAuthenticationSessionRepository)
 	expectedErr  error
 	expectedResp *dto.LoginResponse
 }
@@ -150,6 +151,8 @@ func TestSignUp(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
+	t.Setenv("JWT_SECRET_STRING", "secret")
+
 	tests := []loginTestCase{
 		{
 			name: "successful login",
@@ -157,19 +160,28 @@ func TestLogin(t *testing.T) {
 				Email:    "jondoe@example.com",
 				Password: "password",
 			},
-			setupMock: func(repo *mocks.MockUserRepository) {
+			setupMock: func(repo *mocks.MockUserRepository, authSessionRepo *mocks.MockAuthenticationSessionRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 				repo.On(
 					"GetByEmail",
 					mock.Anything,
 					"jondoe@example.com",
 				).Return(&model.User{
-					ID:        1,
-					FirstName: "John",
-					LastName:  "Doe",
-					Email:     "jondoe@example.com",
-					Phone:     "1234567890",
-					PasswordHash:  "hashed-password",
+					ID:           1,
+					FirstName:    "John",
+					LastName:     "Doe",
+					Email:        "jondoe@example.com",
+					Phone:        "1234567890",
+					PasswordHash: string(hash),
+					IsActive:     true,
 				}, nil)
+				authSessionRepo.On(
+					"CreateSession",
+					mock.Anything,
+					uint64(1),
+					mock.AnythingOfType("string"),
+					mock.Anything,
+				).Return(nil)
 			},
 			expectedErr: nil,
 			expectedResp: &dto.LoginResponse{
@@ -181,6 +193,61 @@ func TestLogin(t *testing.T) {
 				Phone:        "1234567890",
 			},
 		},
+		{
+			name: "empty email",
+			request: &dto.LoginRequest{
+				Email:    "   ",
+				Password: "password",
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
+		{
+			name: "empty password",
+			request: &dto.LoginRequest{
+				Email:    "jondoe@example.com",
+				Password: "   ",
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
+		{
+			name: "invalid email (user not found)",
+			request: &dto.LoginRequest{
+				Email:    "notfound@example.com",
+				Password: "password",
+			},
+			setupMock: func(repo *mocks.MockUserRepository, _ *mocks.MockAuthenticationSessionRepository) {
+				repo.On(
+					"GetByEmail",
+					mock.Anything,
+					"notfound@example.com",
+				).Return(nil, nil)
+			},
+			expectedErr: service.ErrUserNotFound,
+		},
+		{
+			name: "incorrect credentials",
+			request: &dto.LoginRequest{
+				Email:    "jondoe@example.com",
+				Password: "wrongpassword",
+			},
+			setupMock: func(repo *mocks.MockUserRepository, _ *mocks.MockAuthenticationSessionRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+				repo.On(
+					"GetByEmail",
+					mock.Anything,
+					"jondoe@example.com",
+				).Return(&model.User{
+					ID:           1,
+					FirstName:    "John",
+					LastName:     "Doe",
+					Email:        "jondoe@example.com",
+					Phone:        "1234567890",
+					PasswordHash: string(hash),
+					IsActive:     true,
+				}, nil)
+			},
+			expectedErr: service.ErrInvalidCredentials,
+		},
 	}
 
 	for _, tt := range tests {
@@ -188,7 +255,7 @@ func TestLogin(t *testing.T) {
 		authSessionRepo := mocks.NewMockAuthenticationSessionRepository(t)
 
 		if tt.setupMock != nil {
-			tt.setupMock(userRepo)
+			tt.setupMock(userRepo, authSessionRepo)
 		}
 
 		svc := service.NewUserService(userRepo, authSessionRepo)

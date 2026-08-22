@@ -40,6 +40,8 @@ func main() {
 	v1 := r.Group("/v1")
 	userRouter := v1.Group("/user")
 	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo)
+	profileRouter := v1.Group("/profile")
+	router.RegisterProfileRoutes(profileRouter, userRepo)
 
 	err = r.Run()
 	if err != nil {
