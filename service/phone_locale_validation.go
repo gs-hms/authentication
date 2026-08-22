@@ -15,8 +15,8 @@ var phoneLocaleValidationData = map[model.UserDialCode]phoneLocaleValidation{
 	model.IndiaDialCode: {minLen: 10, maxLen: 10},
 }
 
-// ValidatePhone validates the phone number based on the dial code.
-func ValidatePhone(dialCode model.UserDialCode, phone string) bool {
+// IsValidPhone validates the phone number based on the dial code.
+func IsValidPhone(dialCode model.UserDialCode, phone string) bool {
 	validations, ok := phoneLocaleValidationData[dialCode]
 	if !ok {
 		return false

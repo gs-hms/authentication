@@ -3,9 +3,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/mail"
+	"os"
+	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	"github.com/supermarios-hotel-management-system/authentication/model"
 	"github.com/supermarios-hotel-management-system/authentication/repository"
@@ -30,12 +36,8 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 }
 
 func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*model.User, error) {
-	if _, err := mail.ParseAddress(req.Email); err != nil {
-		return nil, ErrInvalidEmail
-	}
-
-	if !ValidatePhone(req.DialCode, req.Phone) {
-		return nil, ErrInvalidPhone
+	if err := s.validateContactDetails(req.Email, req.DialCode, req.Phone); err != nil {
+		return nil, err
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -77,4 +79,80 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 	}
 
 	return &user, nil
+}
+
+func (s *userService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error) {
+	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	return s.generateTokens(user)
+}
+
+// Private method
+func (s *userService) validateContactDetails(email string, dialCode model.UserDialCode, phone string) error {
+	if _, err := mail.ParseAddress(email); err != nil {
+		return ErrInvalidEmail
+	}
+
+	if !IsValidPhone(dialCode, phone) {
+		return ErrInvalidPhone
+	}
+
+	return nil
+}
+
+// Private method
+func (s *userService) generateTokens(user *model.User) (*dto.LoginResponse, error) {
+	if user == nil && user.ID == 0 && user.Email == "" {
+		return nil, errors.New("generateTokens: invalid request")
+	}
+
+	secretString := os.Getenv("JWT_SECRET_STRING")
+	if secretString == "" {
+		return nil, errors.New("generateTokens: JWT_SECRET_STRING not set")
+	}
+
+	now := time.Now()
+	claims := dto.Claims{
+		UserID: user.ID,
+		Email:  user.Email,
+		Name:   fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			Issuer:    "authentication-service",
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute * 15)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	accessToken, err := token.SignedString([]byte(secretString))
+	if err != nil {
+		return nil, fmt.Errorf("generateTokens: failed to sign access token: %w", err)
+	}
+
+	resp := &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: "",
+		UserID:       user.ID,
+		Username:     fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		Email:        user.Email,
+		Phone:        fmt.Sprintf("%s%s", user.DialCode, user.Phone),
+	}
+	return resp, nil
 }

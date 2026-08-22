@@ -14,4 +14,10 @@ var (
 
 	// ErrInvalidPhone is returned when the phone number is invalid.
 	ErrInvalidPhone = errors.New("invalid phone number")
+
+	// ErrInvalidCredentials is returned when the credentials are invalid.
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	// ErrUserNotFound is returned when the user is not found.
+	ErrUserNotFound = errors.New("user not found")
 )

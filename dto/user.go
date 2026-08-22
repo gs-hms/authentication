@@ -1,7 +1,10 @@
 // Package dto provides data transfer objects for the authentication service.
 package dto
 
-import "github.com/supermarios-hotel-management-system/authentication/model"
+import (
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/supermarios-hotel-management-system/authentication/model"
+)
 
 // SignupRequest represents the request object for user signup.
 type SignupRequest struct {
@@ -11,4 +14,25 @@ type SignupRequest struct {
 	DialCode  model.UserDialCode `json:"dial_code" validate:"required"`
 	Phone     string             `json:"phone" validate:"required"`
 	Password  string             `json:"password" validate:"required"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	UserID       uint64 `json:"user_id"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+}
+
+type Claims struct {
+	UserID uint64 `json:"user_id"`
+	Email  string `json:"email"`
+	Name   string `json:"name"`
+	jwt.RegisteredClaims
 }
