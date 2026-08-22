@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**devComplete'
+
+  pull_request:
+    branches:
+      - '**devComplete'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      # ----------------------------------------
+      # 1. Format Check
+      # ----------------------------------------
+      - name: Check Go formatting
+        run: |
+          set -e
+
+          echo "Checking Go formatting..."
+
+          files=$(gofmt -l .)
+
+          if [ -n "$files" ]; then
+            echo "❌ Formatting check failed."
+            echo ""
+            echo "Unformatted files:"
+            echo "$files"
+            echo ""
+            echo "Run:"
+            echo "gofmt -w ."
+            exit 1
+          fi
+
+          echo "✅ Formatting check passed."
+
+      # ----------------------------------------
+      # 2. Go Vet
+      # ----------------------------------------
+      - name: Run go vet
+        run: |
+          set -e
+
+          echo "Running go vet..."
+          go vet ./...
+
+          echo "✅ go vet passed."
+
+      # ----------------------------------------
+      # 3. Go Tests
+      # ----------------------------------------
+      - name: Run Go tests
+        run: |
+          set -e
+
+          echo "Running Go tests..."
+          go test ./...
+
+          echo "✅ Go tests passed."
+
+      # ----------------------------------------
+      # 4. GolangCI-Lint
+      # ----------------------------------------
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1
+          args: ./...
+
+      # ----------------------------------------
+      # 5. Build
+      # ----------------------------------------
+      - name: Build
+        run: |
+          set -e
+
+          echo "Building Go application..."
+          go build ./...
+
+          echo "✅ Build passed."
