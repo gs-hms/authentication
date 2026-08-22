@@ -23,7 +23,6 @@ jobs:
           fetch-depth: 0
 
       - name: Get PR diff
-        id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -31,12 +30,18 @@ jobs:
 
           echo "Getting PR diff..."
 
-          gh pr diff "${{ github.event.pull_request.number }}" \
+          gh pr diff \
+            "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
             > pr.diff
 
           echo "Diff size:"
           wc -c pr.diff
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Run AI code review
         env:
@@ -54,133 +59,120 @@ jobs:
           import urllib.error
           import subprocess
 
-          api_key = os.environ["GEMINI_API_KEY"]
-          pr_number = os.environ["PR_NUMBER"]
-          repository = os.environ["REPOSITORY"]
+          API_KEY = os.environ["GEMINI_API_KEY"]
+          PR_NUMBER = os.environ["PR_NUMBER"]
+          REPOSITORY = os.environ["REPOSITORY"]
 
-          with open("pr.diff", "r", encoding="utf-8", errors="replace") as f:
-              diff = f.read()
+          MODEL = "gemini-3.6-flash"
+
+          with open("pr.diff", "r", encoding="utf-8", errors="replace") as file:
+              diff = file.read()
 
           if not diff.strip():
               print("No changes found in PR.")
-              raise SystemExit(0)
+              exit(0)
 
-          # Prevent accidentally sending an enormous diff.
-          max_diff_size = 100000
+          # Prevent extremely large PRs from consuming excessive API quota.
+          MAX_DIFF_SIZE = 100000
 
-          if len(diff) > max_diff_size:
+          if len(diff) > MAX_DIFF_SIZE:
               print(
-                  f"PR diff is too large ({len(diff)} bytes). "
-                  f"Limiting review to {max_diff_size} bytes."
+                  f"Diff is {len(diff)} bytes. "
+                  f"Limiting to {MAX_DIFF_SIZE} bytes."
               )
-              diff = diff[:max_diff_size]
+              diff = diff[:MAX_DIFF_SIZE]
 
           prompt = f"""
           You are a senior Go backend engineer and security reviewer.
 
-          Review the following Pull Request for a Go Authentication Service
+          Review this Pull Request for a Go Authentication Service
           belonging to a Hotel Management System.
 
-          Your review must focus on real, actionable problems.
+          Your job is to identify real and actionable problems.
 
-          IMPORTANT:
-          - Do NOT complain about formatting that gofmt handles.
-          - Do NOT report harmless stylistic preferences.
-          - Do NOT invent vulnerabilities.
-          - Do NOT praise the code unnecessarily.
-          - Focus on problems that could actually affect correctness,
-            security, reliability, maintainability, or testing.
-          - Review only the changes shown in the diff.
-          - Consider the surrounding code when necessary.
+          DO NOT:
+          - Complain about formatting handled by gofmt.
+          - Report subjective stylistic preferences.
+          - Invent vulnerabilities.
+          - Give unnecessary praise.
+          - Report issues unrelated to the changed code.
 
-          Review the code for:
+          REVIEW FOR:
 
-          1. GO CODE QUALITY
+          GO CODE QUALITY
           - Incorrect error handling
           - Nil pointer risks
           - Goroutine leaks
           - Race conditions
           - Context misuse
           - Resource leaks
-          - Poor package boundaries
-          - Unnecessary complexity
           - Incorrect concurrency
+          - Unnecessary complexity
 
-          2. AUTHENTICATION SECURITY
+          AUTHENTICATION SECURITY
           - Authentication bypasses
           - Authorization bypasses
           - Privilege escalation
-          - JWT validation problems
-          - JWT expiration problems
-          - JWT algorithm issues
-          - Token handling problems
-          - Token replay issues
-          - Password handling problems
-          - Password leakage
-          - Sensitive data exposure
+          - JWT validation
+          - JWT expiration
+          - JWT algorithm validation
+          - Token handling
+          - Token replay
+          - Password handling
+          - Sensitive information exposure
 
-          3. API SECURITY
+          API SECURITY
           - Missing authentication middleware
           - Missing authorization checks
           - IDOR vulnerabilities
           - Missing input validation
           - SQL injection
-          - Improper error responses
-          - Sensitive information in responses
-          - Sensitive information in logs
+          - Sensitive data in API responses
+          - Sensitive data in logs
+          - Incorrect HTTP status codes
 
-          4. DATABASE
+          DATABASE
           - SQL injection
           - Incorrect transactions
-          - Connection leaks
+          - Connection/resource leaks
           - Incorrect queries
-          - Missing important constraints
-          - Obvious performance problems
+          - Obvious performance issues
 
-          5. TESTING
+          TESTING
           - Missing tests for important functionality
           - Missing authentication failure tests
           - Missing authorization tests
           - Missing security edge cases
-          - Tests that don't actually validate the intended behavior
+          - Tests that do not validate the intended behavior
 
-          SEVERITY LEVELS:
+          SEVERITY:
 
           CRITICAL
-          - Serious security vulnerability
-          - Authentication bypass
-          - Remote code execution
-          - Major data exposure
+          Serious security vulnerability, authentication bypass,
+          remote code execution, or major data exposure.
 
           HIGH
-          - Significant security issue
-          - Authorization bypass
-          - Data corruption
-          - Serious production bug
+          Significant security issue, authorization bypass,
+          serious production bug, or data corruption.
 
           MEDIUM
-          - Real bug or meaningful reliability issue
-          - Important missing validation
-          - Significant maintainability problem
+          Real bug, reliability issue, important validation problem,
+          or significant maintainability issue.
 
           LOW
-          - Minor but legitimate improvement
+          Minor but legitimate improvement.
 
           OUTPUT FORMAT:
 
-          Start with:
-
           ## AI Code Review
-
-          Then provide:
 
           ### Summary
 
-          A short summary of the overall review.
+          Briefly summarize the review.
 
           ### Findings
 
-          For every finding use:
+          For every finding:
 
           #### [SEVERITY] Short title
 
@@ -195,94 +187,15 @@ jobs:
           **Recommendation:**
           Explain how to fix it.
 
-          If there are no meaningful issues, say:
+          If there are no meaningful issues, write:
 
           No critical, high, medium, or low severity issues found.
 
-          Pull Request diff:
+          PR DIFF:
 
           ```diff
           {diff}
           ```
           """
 
-          url = (
-              "https://generativelanguage.googleapis.com/v1beta/models/"
-              "gemini-2.5-flash:generateContent"
-              f"?key={api_key}"
-          )
-
-          payload = {
-              "contents": [
-                  {
-                      "parts": [
-                          {
-                              "text": prompt
-                          }
-                      ]
-                  }
-              ],
-              "generationConfig": {
-                  "temperature": 0.1,
-                  "maxOutputTokens": 4096
-              }
-          }
-
-          request = urllib.request.Request(
-              url,
-              data=json.dumps(payload).encode("utf-8"),
-              headers={
-                  "Content-Type": "application/json"
-              },
-              method="POST"
-          )
-
-          try:
-              with urllib.request.urlopen(request, timeout=120) as response:
-                  result = json.loads(response.read().decode("utf-8"))
-
-          except urllib.error.HTTPError as e:
-              body = e.read().decode("utf-8", errors="replace")
-              print("Gemini API request failed:")
-              print(body)
-              raise
-
-          except Exception as e:
-              print(f"Failed to call Gemini API: {e}")
-              raise
-
-          try:
-              review = result["candidates"][0]["content"]["parts"][0]["text"]
-          except (KeyError, IndexError, TypeError):
-              print("Unexpected Gemini response:")
-              print(json.dumps(result, indent=2))
-              raise RuntimeError("Could not extract AI review.")
-
-          if not review.strip():
-              raise RuntimeError("AI returned an empty review.")
-
-          # GitHub comment limit is large, but keeping individual comments
-          # manageable is useful.
-          max_comment_size = 60000
-
-          if len(review) > max_comment_size:
-              review = review[:max_comment_size]
-              review += "\n\n> Review truncated because it exceeded the comment size limit."
-
-          comment = review
-
-          subprocess.run(
-              [
-                  "gh",
-                  "pr",
-                  "comment",
-                  pr_number,
-                  "--repo",
-                  repository,
-                  "--body",
-                  comment
-              ],
-              check=True
-          )
-
-          print("AI review posted successfully.")
+          url =
