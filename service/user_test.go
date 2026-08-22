@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/go-redis/redismock/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
@@ -139,7 +140,8 @@ func TestSignUp(t *testing.T) {
 				tt.setupMock(userRepo)
 			}
 
-			svc := service.NewUserService(userRepo, authSessionRepo)
+			client, _ := redismock.NewClientMock()
+			svc := service.NewUserService(userRepo, authSessionRepo, client)
 
 			_, err := svc.Signup(context.Background(), tt.request)
 
@@ -258,7 +260,8 @@ func TestLogin(t *testing.T) {
 			tt.setupMock(userRepo, authSessionRepo)
 		}
 
-		svc := service.NewUserService(userRepo, authSessionRepo)
+		client, _ := redismock.NewClientMock()
+		svc := service.NewUserService(userRepo, authSessionRepo, client)
 
 		_, err := svc.Login(context.Background(), tt.request)
 
