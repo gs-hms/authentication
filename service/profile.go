@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	"github.com/supermarios-hotel-management-system/authentication/model"
-	"github.com/supermarios-hotel-management-system/authentication/repository"
+	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/model"
+	"github.com/gs-hms/authentication/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 

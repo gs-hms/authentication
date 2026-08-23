@@ -3,7 +3,7 @@ package dto
 
 import (
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/supermarios-hotel-management-system/authentication/model"
+	"github.com/gs-hms/authentication/model"
 )
 
 // SignupRequest represents the request object for user signup.

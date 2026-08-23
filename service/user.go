@@ -12,11 +12,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/model"
+	"github.com/gs-hms/authentication/repository"
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	"github.com/supermarios-hotel-management-system/authentication/model"
-	"github.com/supermarios-hotel-management-system/authentication/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 

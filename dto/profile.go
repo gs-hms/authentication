@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/supermarios-hotel-management-system/authentication/model"
+import "github.com/gs-hms/authentication/model"
 
 // UpdateProfileRequest represents the request object for updating a user profile.
 type UpdateProfileRequest struct {

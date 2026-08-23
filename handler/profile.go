@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	"github.com/supermarios-hotel-management-system/authentication/service"
+	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/service"
 )
 
 // ProfileHandler defines the interface for the profile handler.

@@ -12,8 +12,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	"github.com/supermarios-hotel-management-system/authentication/middleware"
+	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/middleware"
 )
 
 func generateToken(t *testing.T, jti string, exp time.Time) string {

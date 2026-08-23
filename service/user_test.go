@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	mocks "github.com/supermarios-hotel-management-system/authentication/mocks/github.com/supermarios-hotel-management-system/authentication/repository"
-	"github.com/supermarios-hotel-management-system/authentication/model"
-	"github.com/supermarios-hotel-management-system/authentication/service"
+	"github.com/gs-hms/authentication/dto"
+	mocks "github.com/gs-hms/authentication/mocks/github.com/gs-hms/authentication/repository"
+	"github.com/gs-hms/authentication/model"
+	"github.com/gs-hms/authentication/service"
 )
 
 func newSignupRequest(email string, dialCode model.UserDialCode, phone string, password string) *dto.SignupRequest {

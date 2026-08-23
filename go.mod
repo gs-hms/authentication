@@ -1,4 +1,4 @@
-module github.com/supermarios-hotel-management-system/authentication
+module github.com/gs-hms/authentication
 
 go 1.26.3
 

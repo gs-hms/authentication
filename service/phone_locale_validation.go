@@ -3,7 +3,7 @@ package service
 import (
 	"unicode"
 
-	"github.com/supermarios-hotel-management-system/authentication/model"
+	"github.com/gs-hms/authentication/model"
 )
 
 type phoneLocaleValidation struct {

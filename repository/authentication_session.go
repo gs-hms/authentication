@@ -6,8 +6,8 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/supermarios-hotel-management-system/authentication/database"
-	"github.com/supermarios-hotel-management-system/authentication/model"
+	"github.com/gs-hms/authentication/database"
+	"github.com/gs-hms/authentication/model"
 )
 
 // AuthenticationSessionRepository is an interface for interacting with the authentication sessions table.
@@ -49,7 +49,7 @@ func (r *authenticationSessionRepository) CreateSession(ctx context.Context, use
 		return fmt.Errorf("build create session query: %w", err)
 	}
 
-	_, err = r.db.Pool.Query(ctx, qry, args...)
+	_, err = r.db.Pool.Exec(ctx, qry, args...)
 	if err != nil {
 		return fmt.Errorf("execute create session query: %w", err)
 	}

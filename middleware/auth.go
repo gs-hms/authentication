@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gs-hms/authentication/dto"
 	"github.com/redis/go-redis/v9"
-	"github.com/supermarios-hotel-management-system/authentication/dto"
 )
 
 // AuthMiddleware is a gin middleware that authenticates requests using JWT.

@@ -7,9 +7,9 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/gs-hms/authentication/database"
+	"github.com/gs-hms/authentication/model"
 	"github.com/jackc/pgx/v5"
-	"github.com/supermarios-hotel-management-system/authentication/database"
-	"github.com/supermarios-hotel-management-system/authentication/model"
 )
 
 // UserRepository defines the interface for user repository.

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/supermarios-hotel-management-system/authentication/database"
-	"github.com/supermarios-hotel-management-system/authentication/repository"
-	"github.com/supermarios-hotel-management-system/authentication/router"
+	"github.com/gs-hms/authentication/database"
+	"github.com/gs-hms/authentication/repository"
+	"github.com/gs-hms/authentication/router"
 )
 
 func main() {

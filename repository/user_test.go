@@ -11,9 +11,9 @@ import (
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
 
-	"github.com/supermarios-hotel-management-system/authentication/database"
-	"github.com/supermarios-hotel-management-system/authentication/model"
-	"github.com/supermarios-hotel-management-system/authentication/repository"
+	"github.com/gs-hms/authentication/database"
+	"github.com/gs-hms/authentication/model"
+	"github.com/gs-hms/authentication/repository"
 )
 
 func setupRepository(t *testing.T) (repository.UserRepository, pgxmock.PgxPoolIface) {
@@ -108,7 +108,8 @@ func TestListUsers(t *testing.T) {
 
 	ctx := context.Background()
 	createdAt := time.Now()
-	updatedAt := time.Now()
+	updatedAtVal := time.Now()
+	updatedAt := &updatedAtVal
 
 	// mock expectations
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM users WHERE deleted_at IS NULL`).
@@ -190,7 +191,8 @@ func TestGetByEmail(t *testing.T) {
 	ctx := context.Background()
 
 	createdAt := time.Now()
-	updatedAt := time.Now()
+	updatedAtVal := time.Now()
+	updatedAt := &updatedAtVal
 	email := gofakeit.Email()
 
 	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND email = \$1`).
@@ -253,7 +255,8 @@ func TestGetByPhone(t *testing.T) {
 	ctx := context.Background()
 
 	createdAt := time.Now()
-	updatedAt := time.Now()
+	updatedAtVal := time.Now()
+	updatedAt := &updatedAtVal
 	dialCode := model.UserDialCode("91")
 	phone := gofakeit.PhoneFormatted()
 	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND dial_code = \$1 AND phone = \$2`).
@@ -318,7 +321,8 @@ func TestGetByID(t *testing.T) {
 	ctx := context.Background()
 
 	createdAt := time.Now()
-	updatedAt := time.Now()
+	updatedAtVal := time.Now()
+	updatedAt := &updatedAtVal
 	id := uint64(1)
 
 	mock.ExpectQuery(`SELECT id, first_name, last_name, email, dial_code, phone, password_hash, is_active, created_at, updated_at FROM users WHERE deleted_at IS NULL AND id = \$1`).

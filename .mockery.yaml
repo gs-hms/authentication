@@ -1,7 +1,7 @@
 with-expecter: true
 
 packages:
-  github.com/supermarios-hotel-management-system/authentication/repository:
+  github.com/gs-hms/authentication/repository:
     interfaces:
       UserRepository:
       AuthenticationSessionRepository:

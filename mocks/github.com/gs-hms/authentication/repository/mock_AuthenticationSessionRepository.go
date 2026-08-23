@@ -5,8 +5,8 @@ package repository
 import (
 	context "context"
 
+	model "github.com/gs-hms/authentication/model"
 	mock "github.com/stretchr/testify/mock"
-	model "github.com/supermarios-hotel-management-system/authentication/model"
 
 	time "time"
 )

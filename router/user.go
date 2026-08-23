@@ -3,11 +3,11 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gs-hms/authentication/handler"
+	"github.com/gs-hms/authentication/middleware"
+	"github.com/gs-hms/authentication/repository"
+	"github.com/gs-hms/authentication/service"
 	"github.com/redis/go-redis/v9"
-	"github.com/supermarios-hotel-management-system/authentication/handler"
-	"github.com/supermarios-hotel-management-system/authentication/middleware"
-	"github.com/supermarios-hotel-management-system/authentication/repository"
-	"github.com/supermarios-hotel-management-system/authentication/service"
 )
 
 // RegisterUserRoutes registers the user routes.

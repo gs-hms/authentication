@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/supermarios-hotel-management-system/authentication/dto"
-	"github.com/supermarios-hotel-management-system/authentication/service"
+	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/service"
 )
 
 // UserHandler defines the interface for the user handler.
