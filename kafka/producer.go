@@ -28,7 +28,7 @@ func NewProducer(brokers []string, topic string) *Producer {
 }
 
 // Publish serializes the value to JSON and publishes it to the Kafka topic.
-func (p *Producer) Publish(ctx context.Context, key string, value map[string]string) error {
+func (p *Producer) Publish(ctx context.Context, userID uint64, key string, value map[string]string) error {
 	bytes, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message value: %w", err)
@@ -37,6 +37,9 @@ func (p *Producer) Publish(ctx context.Context, key string, value map[string]str
 	err = p.writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(key),
 		Value: bytes,
+		Headers: []kafka.Header{
+			{Key: "user-id", Value: []byte(fmt.Sprintf("%d", userID))},
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to write message to kafka: %w", err)

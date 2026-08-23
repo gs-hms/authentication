@@ -119,7 +119,11 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 
 	eventTemplate := s.createEventTemplate(user)
 
-	s.kafkaProducer.Publish(ctx, string(events.UserCreated), eventTemplate)
+	if s.kafkaProducer != nil {
+		if err := s.kafkaProducer.Publish(ctx, user.ID, string(events.UserCreated), eventTemplate); err != nil {
+			return nil, fmt.Errorf("publish user creation event: %w", err)
+		}
+	}
 
 	return &user, nil
 }
