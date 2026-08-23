@@ -42,7 +42,7 @@ func (p *Producer) Publish(ctx context.Context, key string, value map[string]str
 		return fmt.Errorf("failed to write message to kafka: %w", err)
 	}
 
-	log.Printf("Published message to kafka | topic=%s | key=%s", p.writer.Topic, key)
+	log.Printf("published message to kafka | topic=%s | key=%s", p.writer.Topic, key)
 	return nil
 }
 
