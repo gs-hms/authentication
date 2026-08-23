@@ -56,7 +56,7 @@ func main() {
 	authSessionRepo := repository.NewAuthenticationSessionRepository(db)
 	userRepo := repository.NewUserRepository(db)
 
-	v1 := r.Group("/v1")
+	v1 := r.Group("/v1/authentication")
 	userRouter := v1.Group("/user")
 	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo, redisConn.Client, kafkaProducer)
 	profileRouter := v1.Group("/profile")

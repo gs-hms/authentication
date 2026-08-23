@@ -42,6 +42,7 @@ func NewUserService(userRepo repository.UserRepository, authSessionRepo reposito
 		userRepo:        userRepo,
 		authSessionRepo: authSessionRepo,
 		redisClient:     redisClient,
+		kafkaProducer:   kafkaProducer,
 	}
 }
 
@@ -114,6 +115,7 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 	if err := s.userRepo.CreateUser(ctx, &user); err != nil {
 		return nil, err
 	}
+	go s.kafkaProducer.Publish(ctx, "hello", "this is a message")
 
 	return &user, nil
 }
