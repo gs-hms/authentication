@@ -16,6 +16,7 @@ import (
 	"github.com/gs-hms/authentication/kafka"
 	"github.com/gs-hms/authentication/model"
 	"github.com/gs-hms/authentication/repository"
+	"github.com/gs-hms/event-handler/events"
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -115,7 +116,10 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 	if err := s.userRepo.CreateUser(ctx, &user); err != nil {
 		return nil, err
 	}
-	go s.kafkaProducer.Publish(ctx, "hello", "this is a message")
+
+	eventTemplate := s.createEventTemplate(user)
+
+	s.kafkaProducer.Publish(ctx, string(events.UserCreated), eventTemplate)
 
 	return &user, nil
 }
@@ -207,4 +211,13 @@ func (s *userService) generateTokens(ctx context.Context, user *model.User) (*dt
 		Phone:        fmt.Sprintf("%s%s", user.DialCode, user.Phone),
 	}
 	return resp, nil
+}
+
+func (s *userService) createEventTemplate(user model.User) map[string]string {
+	return map[string]string{
+		"USER_ID":    fmt.Sprintf("%d", user.ID),
+		"USER_NAME":  fmt.Sprintf("%s %s", user.FirstName, user.LastName),
+		"USER_EMAIL": user.Email,
+		"USER_PHONE": fmt.Sprintf("%s-%s", user.DialCode, user.Phone),
+	}
 }
