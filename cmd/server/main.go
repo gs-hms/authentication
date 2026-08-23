@@ -9,8 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gs-hms/authentication/database"
+	"github.com/gs-hms/authentication/kafka"
 	"github.com/gs-hms/authentication/repository"
 	"github.com/gs-hms/authentication/router"
+	"github.com/gs-hms/event-handler/events"
 )
 
 func main() {
@@ -32,6 +34,17 @@ func main() {
 		redisConn = &database.Redis{Client: nil}
 	}
 
+	kafkaHost := os.Getenv("KAFKA_BROKERS")
+	if strings.TrimSpace(kafkaHost) == "" {
+		log.Fatal("KAFKA_BROKERS environment variable is not set")
+	}
+
+	kafkaProducer := kafka.NewProducer(
+		strings.Split(kafkaHost, ","),
+		events.KafkaTopics,
+	)
+	defer kafkaProducer.Close()
+
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -45,7 +58,7 @@ func main() {
 
 	v1 := r.Group("/v1")
 	userRouter := v1.Group("/user")
-	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo, redisConn.Client)
+	router.RegisterUserRoutes(userRouter, userRepo, authSessionRepo, redisConn.Client, kafkaProducer)
 	profileRouter := v1.Group("/profile")
 	router.RegisterProfileRoutes(profileRouter, userRepo, redisConn.Client)
 

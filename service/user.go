@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gs-hms/authentication/dto"
+	"github.com/gs-hms/authentication/kafka"
 	"github.com/gs-hms/authentication/model"
 	"github.com/gs-hms/authentication/repository"
 	"github.com/jackc/pgx/v5"
@@ -32,10 +33,11 @@ type userService struct {
 	userRepo        repository.UserRepository
 	authSessionRepo repository.AuthenticationSessionRepository
 	redisClient     *redis.Client
+	kafkaProducer   *kafka.Producer
 }
 
 // NewUserService creates a new instance of the UserService.
-func NewUserService(userRepo repository.UserRepository, authSessionRepo repository.AuthenticationSessionRepository, redisClient *redis.Client) UserService {
+func NewUserService(userRepo repository.UserRepository, authSessionRepo repository.AuthenticationSessionRepository, redisClient *redis.Client, kafkaProducer *kafka.Producer) UserService {
 	return &userService{
 		userRepo:        userRepo,
 		authSessionRepo: authSessionRepo,

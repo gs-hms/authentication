@@ -143,7 +143,7 @@ func TestSignUp(t *testing.T) {
 			}
 
 			client, _ := redismock.NewClientMock()
-			svc := service.NewUserService(userRepo, authSessionRepo, client)
+			svc := service.NewUserService(userRepo, authSessionRepo, client, nil)
 
 			_, err := svc.Signup(context.Background(), tt.request)
 
@@ -263,7 +263,7 @@ func TestLogin(t *testing.T) {
 		}
 
 		client, _ := redismock.NewClientMock()
-		svc := service.NewUserService(userRepo, authSessionRepo, client)
+		svc := service.NewUserService(userRepo, authSessionRepo, client, nil)
 
 		_, err := svc.Login(context.Background(), tt.request)
 
@@ -333,7 +333,7 @@ func TestLogout(t *testing.T) {
 				tt.setupMock(authSessionRepo, redisMock)
 			}
 
-			svc := service.NewUserService(userRepo, authSessionRepo, client)
+			svc := service.NewUserService(userRepo, authSessionRepo, client, nil)
 
 			err := svc.Logout(context.Background(), tt.userID, tt.jti, tt.exp, tt.req)
 
