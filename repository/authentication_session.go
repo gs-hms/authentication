@@ -40,7 +40,7 @@ func NewAuthenticationSessionRepository(db *database.Postgres) AuthenticationSes
 // CreateSession creates a new authentication session for a user.
 func (r *authenticationSessionRepository) CreateSession(ctx context.Context, userID uint64, refreshToken string, expiresAt time.Time) error {
 	qry, args, err := sq.Insert(model.AuthenticationSessionTableName).
-		Columns("user_id", "refresh_token", "expires_at").
+		Columns("user_id", "refresh_token", "expired_at").
 		Values(userID, refreshToken, expiresAt).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
@@ -58,9 +58,10 @@ func (r *authenticationSessionRepository) CreateSession(ctx context.Context, use
 
 // GetActiveSessionByUserID gets all active authentication sessions for a user.
 func (r *authenticationSessionRepository) GetActiveSessionByUserID(ctx context.Context, userID uint64) ([]*model.AuthenticationSession, error) {
-	qry, args, err := sq.Select("id", "user_id", "refresh_token", "expires_at").
+	qry, args, err := sq.Select("id", "user_id", "refresh_token", "expired_at").
 		From(model.AuthenticationSessionTableName).
-		Where(sq.Eq{"user_id": userID, "expires_at >": time.Now()}).
+		Where(sq.Eq{"user_id": userID}).
+		Where(sq.Gt{"expired_at": time.Now()}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 
@@ -88,9 +89,10 @@ func (r *authenticationSessionRepository) GetActiveSessionByUserID(ctx context.C
 
 // GetActiveSessionByRefreshToken gets an authentication session by its refresh token.
 func (r *authenticationSessionRepository) GetActiveSessionByRefreshToken(ctx context.Context, refreshToken string) (*model.AuthenticationSession, error) {
-	qry, args, err := sq.Select("id", "user_id", "refresh_token", "expires_at").
+	qry, args, err := sq.Select("id", "user_id", "refresh_token", "expired_at").
 		From(model.AuthenticationSessionTableName).
-		Where(sq.Eq{"refresh_token": refreshToken, "expires_at >": time.Now()}).
+		Where(sq.Eq{"refresh_token": refreshToken}).
+		Where(sq.Gt{"expired_at": time.Now()}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 

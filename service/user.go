@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/supermarios-hotel-management-system/authentication/dto"
 	"github.com/supermarios-hotel-management-system/authentication/model"
@@ -90,7 +91,7 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 	}
 
 	existingUser, err := s.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
 
@@ -100,7 +101,7 @@ func (s *userService) Signup(ctx context.Context, req *dto.SignupRequest) (*mode
 
 	// Check if user with the same phone number exists
 	existingUser, err = s.userRepo.GetByPhone(ctx, req.DialCode, req.Phone)
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
 

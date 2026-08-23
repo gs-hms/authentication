@@ -3,9 +3,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5"
 	"github.com/supermarios-hotel-management-system/authentication/database"
 	"github.com/supermarios-hotel-management-system/authentication/model"
 )
@@ -159,6 +161,9 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 		&user.UpdatedAt)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("execute get user by email query : %w", err)
 	}
 
@@ -181,6 +186,9 @@ func (r *userRepository) GetByPhone(ctx context.Context, dialCode model.UserDial
 	err = r.db.Pool.QueryRow(ctx, qry, args...).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DialCode, &user.Phone, &user.PasswordHash, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("execute get user by phone query : %w", err)
 	}
 
@@ -224,6 +232,9 @@ func (r *userRepository) GetByID(ctx context.Context, id uint64) (*model.User, e
 		&user.UpdatedAt)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("execute get user by email query : %w", err)
 	}
 
